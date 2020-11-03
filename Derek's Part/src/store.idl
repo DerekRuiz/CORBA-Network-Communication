@@ -1,0 +1,23 @@
+module StoreMod
+{
+    typedef sequence<string> Array;
+
+    interface Store
+    {
+    string addItem(in string managerID, in string itemID, in string itemName, in long quantity, in double price);
+    
+    string removeItem(in string managerID, in string itemID, in long quantity);
+
+    Array listItemAvailability(in string managerID);
+    
+    string purchaseItem(in string customerID, in string itemID, in string dateOfPurchase);
+
+    Array findItem(in string customerID, in string itemName);
+    
+    string returnItem(in string customerID, in string itemID, in string dateOfReturn);
+    
+    string exchangeItem(in string customerID, in string newItemID, in string oldItemID, in string dateOfExchange);
+
+    oneway void shutdown();
+    };
+};
