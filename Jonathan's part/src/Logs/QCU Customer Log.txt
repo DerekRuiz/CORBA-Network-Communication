@@ -1,0 +1,36 @@
+Nov 18, 2020 1:44:54 PM Client.customerClient main
+INFO: Login Successfull. | Customer ID: QCU | Branch ID: QC
+Nov 18, 2020 1:44:59 PM Client.customerClient main
+INFO: findItem() called. Parameters: QCU pants
+{itemID='QC1010', name='pants', quantity=20, price=2}
+{itemID='ON1010', name='pants', quantity=10, price=2}
+{itemID='BC1010', name='pants', quantity=10, price=2}
+Nov 18, 2020 1:45:04 PM Client.customerClient main
+INFO: findItem() called. Parameters: QCU shirt
+{itemID='QC1011', name='shirt', quantity=10, price=5}
+{itemID='ON1011', name='shirt', quantity=10, price=5}
+{itemID='BC1011', name='shirt', quantity=10, price=5}
+Nov 18, 2020 1:45:09 PM Client.customerClient main
+INFO: findItem() called. Parameters: QCU a
+Item not present in local QC Store.
+Item not present in foreign  ON Store.
+Item not present in foreign  BC Store.
+Nov 18, 2020 1:45:21 PM Client.customerClient main
+INFO: purchaseItem() called. Parameters: QCU BC1010 2020-10-10
+Status: Purchase successful in foreign BC Store. Your budget is now 998
+Nov 18, 2020 1:45:33 PM Client.customerClient main
+INFO: exchangeItem() called. Parameters: QCU ON1010 BC1010
+Status: returnItem() called. Parameters: QCU BC1010 2020-11-18
+Status: Return was unsuccessful in foreign BC Store. Reason:
+ Purchase was made more than 30 days ago. Return unsuccesssful.
+Return was not successful so exchange cannot be completed
+Nov 18, 2020 1:45:49 PM Client.customerClient main
+INFO: purchaseItem() called. Parameters: QCU QC1010 2020-11-11
+Status: Purchase successful in QC Store. Your budget is now 996
+Nov 18, 2020 1:46:26 PM Client.customerClient main
+INFO: exchangeItem() called. Parameters: QCU ON1010 QC1010
+Status: returnItem() called. Parameters: QCU QC1010 2020-11-18
+Status: Return successful in QC Store. Your budget is now: 998
+purchaseItem() called. Parameters: QCU ON1010 2020-11-18
+Status: Purchase successful in foreign ON Store. Your budget is now 996
+Exchange operation was successful.

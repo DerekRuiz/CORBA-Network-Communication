@@ -1,0 +1,36 @@
+Nov 18, 2020 1:44:23 PM Server.Store <init>
+INFO: Initializing Server ...
+Nov 18, 2020 1:44:31 PM Server.Store listItemAvailability
+INFO: listItemAvailability() called. Parameters: QCM
+Nov 18, 2020 1:44:42 PM Server.Store addItem
+INFO: addItem() called. Parameters: QCM QC1010 pants 10 2
+Status: Item already exists. Quantity was increased. Operation successful.
+Nov 18, 2020 1:44:59 PM Server.Store findItem
+INFO: findItem() called. Parameters: QCU pants
+{itemID='QC1010', name='pants', quantity=20, price=2}
+{itemID='ON1010', name='pants', quantity=10, price=2}
+{itemID='BC1010', name='pants', quantity=10, price=2}
+Nov 18, 2020 1:45:04 PM Server.Store findItem
+INFO: findItem() called. Parameters: QCU shirt
+{itemID='QC1011', name='shirt', quantity=10, price=5}
+{itemID='ON1011', name='shirt', quantity=10, price=5}
+{itemID='BC1011', name='shirt', quantity=10, price=5}
+Nov 18, 2020 1:45:09 PM Server.Store findItem
+INFO: findItem() called. Parameters: QCU a
+Item not present in local QC Store.
+Item not present in foreign  ON Store.
+Item not present in foreign  BC Store.
+Nov 18, 2020 1:45:33 PM Server.Store returnItem
+INFO: returnItem() called. Parameters: QCU BC1010 2020-11-18
+Status: Return was unsuccessful in foreign BC Store. Reason:
+ Purchase was made more than 30 days ago. Return unsuccesssful.
+Nov 18, 2020 1:46:26 PM Server.Store returnItem
+INFO: returnItem() called. Parameters: QCU QC1010 2020-11-18
+Status: Return successful in QC Store. Your budget is now: 998
+Nov 18, 2020 1:46:26 PM Server.Store exchangeItem
+INFO: exchangeItem() called. Parameters: QCU ON1010 QC1010
+Status: returnItem() called. Parameters: QCU QC1010 2020-11-18
+Status: Return successful in QC Store. Your budget is now: 998
+purchaseItem() called. Parameters: QCU ON1010 2020-11-18
+Status: Purchase successful in foreign ON Store. Your budget is now 996
+Exchange operation was successful.
