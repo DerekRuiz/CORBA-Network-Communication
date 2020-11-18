@@ -7,6 +7,8 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -25,7 +27,9 @@ public class ReplicaManager {
 
     DatagramSocket replicaSocket;
 
-    private int resendDelay = 1000;
+    private static final int resendDelay = 1000;
+    private int nextProcessID;
+    private PriorityQueue<String> messageQueue;
 
     public ReplicaManager() {
         qcStore = new StoreServer("QC", 5461);
@@ -40,11 +44,30 @@ public class ReplicaManager {
             System.out.println("Replica Manager cannot start since host cannot be found");
             System.exit(1);
         }
+
+        nextProcessID = 1;
+        messageQueue = new PriorityQueue<>(new MessageStringComparator());
         new Thread(() -> {
-            waitForRequest();
+            while (true) {
+                waitForRequest();
+            }
+        }).start();
+        new Thread(() -> {
+            while (true) {
+                while (messageQueue.isEmpty()) {
+                    Thread.yield();
+                }
+                processRequest();
+            }
         }).start();
     }
 
+    /**
+     * Sends a received message to a process.
+     *
+     * @param requestAddress the InetAdress of the machine
+     * @param requestPort the port to connect to
+     */
     private void sendReceivedMessage(InetAddress requestAddress, int requestPort) {
         try (DatagramSocket sendSocket = new DatagramSocket()) {
             byte[] resultBytes = String.format("RECEIVED").getBytes();
@@ -54,12 +77,21 @@ public class ReplicaManager {
         }
     }
 
+    /**
+     * Sends a reliable UDP request to another machine. This is reliable since
+     * it sends the message, and if no response it returned in
+     * 'ReplicaManager.resendDelay' amount of time then the message is resent.
+     *
+     * @param message the message to be sent through UDP request
+     * @param requestAddress the InetAddress of the machine
+     * @param requestPort the port to connect to
+     */
     private void sendAnswerMessage(String message, InetAddress requestAddress, int requestPort) {
         boolean not_received = true;
         byte[] resultBytes = message.getBytes();
         DatagramPacket request = new DatagramPacket(resultBytes, resultBytes.length, requestAddress, requestPort);
         try (DatagramSocket sendSocket = new DatagramSocket()) {
-            sendSocket.setSoTimeout(this.resendDelay);
+            sendSocket.setSoTimeout(ReplicaManager.resendDelay);
             while (not_received) {
                 sendSocket.send(request);
                 try {
@@ -77,23 +109,52 @@ public class ReplicaManager {
         }
     }
 
+    /**
+     * Waits for UDP requests. When a request is received, it added it to the
+     * queue and sends a response that it was received.
+     */
     private void waitForRequest() {
         try {
             byte[] buffer = new byte[1000];
             DatagramPacket request = new DatagramPacket(buffer, buffer.length);
             replicaSocket.receive(request);
             String message = new String(request.getData());
+            this.sendReceivedMessage(request.getAddress(), request.getPort());
+            messageQueue.add(message);
+        } catch (SocketException ex) {
+            System.out.println("Could not connect to port, canceling server");
+            System.exit(1);
+        } catch (IOException ex) {
+        }
+    }
 
-            while (Thread.activeCount() > 20) {
-                Thread.yield();
+    /**
+     * Gets the next message in the queue and processes it. If the queue is
+     * empty nothing is processed. If the message was already processed, meaning
+     * the sequencer ID is less than the next ID to be processed, then the
+     * message is not processed. If the message is too early, meaning the
+     * sequencer ID is greater than the next id to be processed, then add it
+     * back to the queue.
+     */
+    private void processRequest() {
+        try {
+            String message = messageQueue.poll();
+            if (message == null) {
+                return;
             }
-            new Thread(() -> {
-                waitForRequest();
-            }).start();
-
             String[] splitMessage = message.split("|");
 
             String sender = splitMessage[0];
+            int processID = Integer.parseInt(sender);
+            
+            // Ensures that no duplicate message is processed.
+            if (processID <= this.nextProcessID) {
+                return;
+            } else if (processID > this.nextProcessID + 1) {
+                messageQueue.add(message);
+                return;
+            }
+
             InetAddress senderAddress = InetAddress.getByName(sender);
             int senderPort = Integer.parseInt(sender);
 
@@ -111,7 +172,7 @@ public class ReplicaManager {
                 this.sendAnswerMessage("ERROR:NOT A VALID STORE", senderAddress, senderPort);
                 return;
             }
-            
+
             String result;
             switch (args[0].trim()) {
                 case "ADD":
@@ -141,11 +202,18 @@ public class ReplicaManager {
                     result = "ERROR:NOT A VALID METHOD";
             }
             this.sendAnswerMessage(result, senderAddress, senderPort);
-
-        } catch (SocketException ex) {
-            System.out.println("Could not connect to port, canceling server");
-            System.exit(1);
+            this.nextProcessID++;
         } catch (IOException ex) {
+        }
+    }
+
+    private static class MessageStringComparator implements Comparator<String> {
+
+        @Override
+        public int compare(String str1, String str2) {
+            int i1 = Integer.parseInt(str1.split(",")[0]);
+            int i2 = Integer.parseInt(str2.split(",")[0]);
+            return Integer.compare(i1, i2);
         }
     }
 
