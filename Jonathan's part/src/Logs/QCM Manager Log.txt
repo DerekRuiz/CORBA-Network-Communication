@@ -1,0 +1,7 @@
+Nov 18, 2020 1:44:29 PM Client.managerClient main
+INFO: Login Successfull. | Manager ID: QCM | Branch ID: QC
+Nov 18, 2020 1:44:31 PM Client.managerClient main
+INFO: {itemID='QC1011', name='shirt', quantity=10, price=5}
+{itemID='QC1010', name='pants', quantity=10, price=2}
+Nov 18, 2020 1:44:42 PM Client.managerClient main
+INFO: Item already exists. Quantity was increased. Operation successful.
