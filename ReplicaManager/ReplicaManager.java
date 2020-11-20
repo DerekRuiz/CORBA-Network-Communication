@@ -6,8 +6,11 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.PriorityQueue;
 
 /*
@@ -26,17 +29,26 @@ public class ReplicaManager {
     StoreServer bcStore;
 
     DatagramSocket replicaSocket;
+    InetAddress address;
+    int port;
 
     private static final int resendDelay = 1000;
+    private static final long hearbeatDelay = 10;
+    private static final long heartbeatListenDelay = 100;
     private int nextProcessID;
     private PriorityQueue<String> messageQueue;
+    private ArrayList<ReplicaManager> group;
+    private HashMap<ReplicaManager, Integer> incorrectReplicas;
+    private HashMap<ReplicaManager, Long> livingReplicas;
 
     public ReplicaManager() {
         qcStore = new StoreServer("QC", 5461);
         onStore = new StoreServer("ON", 5462);
         bcStore = new StoreServer("BC", 5463);
         try {
-            this.replicaSocket = new DatagramSocket(6789, InetAddress.getByName("HostName"));
+            this.port = 6789;
+            this.address = InetAddress.getLocalHost();
+            this.replicaSocket = new DatagramSocket(this.port, this.address);
         } catch (SocketException ex) {
             System.out.println("Replica Manager cannot start since port is already bound");
             System.exit(1);
@@ -45,8 +57,21 @@ public class ReplicaManager {
             System.exit(1);
         }
 
-        nextProcessID = 1;
+        nextProcessID = 0;
         messageQueue = new PriorityQueue<>(new MessageStringComparator());
+        if (group == null) {
+            group = new ArrayList<>(3);
+        }
+        if (incorrectReplicas == null) {
+            incorrectReplicas = new HashMap<>();
+        }
+        if (livingReplicas == null) {
+            livingReplicas = new HashMap<>();
+        }
+
+        group.add(this);
+        incorrectReplicas.put(this, 0);
+        livingReplicas.put(this, (long) 0);
         new Thread(() -> {
             while (true) {
                 waitForRequest();
@@ -60,7 +85,30 @@ public class ReplicaManager {
                 processRequest();
             }
         }).start();
+        new Thread(() -> {
+            while (true) {
+                sendHeartBeat();
+                try {
+                    Thread.sleep(this.hearbeatDelay);
+                } catch (InterruptedException ex) {
+                }
+            }
+        }).start();
+        new Thread(() -> {
+            while (true) {
+                listenForHeartBeat();
+                try {
+                    Thread.sleep(this.heartbeatListenDelay);
+                } catch (InterruptedException ex) {
+                }
+            }
+        }).start();
     }
+    /*
+     private ArrayList<ReplicaManager> getGroup() {
+
+     }
+     */
 
     /**
      * Sends a received message to a process.
@@ -110,6 +158,46 @@ public class ReplicaManager {
     }
 
     /**
+     * Sends a heartbeat to every replica manager to inform that this is alive.
+     */
+    private void sendHeartBeat() {
+        for (Map.Entry<ReplicaManager, Long> entry : livingReplicas.entrySet()) {
+            ReplicaManager rm = entry.getKey();
+            try (DatagramSocket sendSocket = new DatagramSocket()) {
+                byte[] resultBytes = String.format("HEARTBEAT").getBytes();
+                DatagramPacket request = new DatagramPacket(resultBytes, resultBytes.length, rm.address, rm.port);
+                sendSocket.send(request);
+            } catch (IOException ex) {
+            }
+        }
+    }
+
+    /**
+     * Checks every replica manager to see if it produced at least one heart
+     * beat since last check. If no heartbeat detected since last listening,
+     * then it revives the replica manager at that location.
+     */
+    private void listenForHeartBeat() {
+        for (Map.Entry<ReplicaManager, Long> entry : livingReplicas.entrySet()) {
+            ReplicaManager rm = entry.getKey();
+            Long indication = entry.getValue();
+            if (indication == 0) {
+                reviveReplicaManager(rm);
+            } else {
+                entry.setValue((long) 0);
+            }
+        }
+    }
+
+    private void manageIncorrectResponses() {
+
+    }
+
+    private void reviveReplicaManager(ReplicaManager rm) {
+
+    }
+
+    /**
      * Waits for UDP requests. When a request is received, it added it to the
      * queue and sends a response that it was received.
      */
@@ -120,6 +208,15 @@ public class ReplicaManager {
             replicaSocket.receive(request);
             String message = new String(request.getData());
             this.sendReceivedMessage(request.getAddress(), request.getPort());
+
+            if (message.toUpperCase().contains("INCORRECT")) {
+                this.incorrectReplicas.put(this, this.incorrectReplicas.get(this) + 1);
+                return;
+            } else if (message.toUpperCase().contains("HEARTBEAT")) {
+                this.livingReplicas.put(this, this.livingReplicas.get(this) + 1);
+                return;
+            }
+
             messageQueue.add(message);
         } catch (SocketException ex) {
             System.out.println("Could not connect to port, canceling server");
@@ -142,24 +239,25 @@ public class ReplicaManager {
             if (message == null) {
                 return;
             }
+
             String[] splitMessage = message.split("|");
 
             String sender = splitMessage[0];
-            int processID = Integer.parseInt(sender);
-            
+            String[] args = sender.split(",");
+            int processID = Integer.parseInt(args[0]);
+            int senderPort = Integer.parseInt(args[1]);
+            InetAddress senderAddress = InetAddress.getByName(args[2]);
+
             // Ensures that no duplicate message is processed.
-            if (processID <= this.nextProcessID) {
+            if (processID < this.nextProcessID) {
                 return;
-            } else if (processID > this.nextProcessID + 1) {
+            } else if (processID > this.nextProcessID) {
                 messageQueue.add(message);
                 return;
             }
 
-            InetAddress senderAddress = InetAddress.getByName(sender);
-            int senderPort = Integer.parseInt(sender);
-
             String query = splitMessage[1];
-            String[] args = query.split(",");
+            args = query.split(",");
 
             StoreServer usersStore = null;
             if (args[1].toUpperCase().contains("QC")) {
@@ -169,7 +267,7 @@ public class ReplicaManager {
             } else if (args[1].toUpperCase().contains("BC")) {
                 usersStore = bcStore;
             } else {
-                this.sendAnswerMessage("ERROR:NOT A VALID STORE", senderAddress, senderPort);
+                this.sendAnswerMessage(sender + "|ERROR:NOT A VALID STORE", senderAddress, senderPort);
                 return;
             }
 
@@ -211,8 +309,8 @@ public class ReplicaManager {
 
         @Override
         public int compare(String str1, String str2) {
-            int i1 = Integer.parseInt(str1.split(",")[0]);
-            int i2 = Integer.parseInt(str2.split(",")[0]);
+            int i1 = Integer.parseInt(str1.split("|")[0].split(",")[0]);
+            int i2 = Integer.parseInt(str2.split("|")[0].split(",")[0]);
             return Integer.compare(i1, i2);
         }
     }
