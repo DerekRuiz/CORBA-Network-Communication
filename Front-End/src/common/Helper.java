@@ -1,6 +1,7 @@
 package common;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.rmi.AlreadyBoundException;
@@ -52,6 +53,8 @@ public class Helper {
    	 	return b;
 	}
 	
+	
+	
 	public static Logger initiateLogger(String userId) throws IOException {
 		Files.createDirectories(Paths.get("Logs/Users"));
 		
@@ -79,6 +82,8 @@ public class Helper {
 		
 		return logger;
 	}
+	
+	
 	
 	public static void initializeORB(String[] args, String uuid)  {
 		new Thread(new Runnable() {

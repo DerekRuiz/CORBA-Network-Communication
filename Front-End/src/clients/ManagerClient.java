@@ -1,26 +1,13 @@
 package clients;
 
-import java.io.*;
-import java.net.MalformedURLException;
-import java.net.UnknownHostException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
-import org.omg.CosNaming.*;
-import org.omg.CosNaming.NamingContextPackage.*;
 
 import common.Helper;
 import shared.FrontEndInterface;
 
 import org.omg.CORBA.*;
-
-import java.util.Date;
-import java.util.LinkedList;
 import java.util.Scanner;
 import java.util.UUID;
-import java.util.logging.FileHandler;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -125,12 +112,6 @@ public class ManagerClient {
 	         System.out.println("Exception in Client: " + e);
 	    } 
 	}
-		
-	
-	private String ExtractRegion(String id) {
-		return id.substring(0,2);
-	}
-
 	
 	private static boolean ValidateId(String id) {
 		Pattern p = Pattern.compile("(QC|ON|BC)(M)([0-9]){4}");
