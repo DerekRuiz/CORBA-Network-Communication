@@ -11,8 +11,13 @@ import java.util.logging.SimpleFormatter;
 
 import org.omg.CORBA.*;
 
+import com.sun.javafx.scene.paint.GradientUtils.Parser;
+
 import common.Tuple;
 import java.util.ArrayList;
+import java.util.Scanner;
+
+
 
 public class FrontEnd extends shared.FrontEndInterfacePOA {
 
@@ -22,8 +27,17 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 	private int localPort = 5100;
 	private InetAddress sequencerAddress = InetAddress.getLocalHost();
 	private int sequencerPort = 5123;
+	
+	private InetAddress RM1Address = InetAddress.getLocalHost();
+	private int RM1Port = 4123;
+	private InetAddress RM2Address = InetAddress.getLocalHost();
+	private int RM2Port = 4124;
+	private InetAddress RM3Address = InetAddress.getLocalHost();
+	private int RM3Port = 4125;
+	
 	private Logger log;
 	private String uuid;
+	private long stopwatch = System.currentTimeMillis();
 	
 	private static int resendDelay = 1000;
 	
@@ -37,6 +51,8 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 			this.orb = orb;
 			this.uuid = uuid;
 			
+			ReadAddresses();
+			
 			this.socket = new DatagramSocket(this.localPort, this.localAddress);
 			
 			log = initiateLogger(uuid);
@@ -44,9 +60,10 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 			
 			log.info("Front-End started up with port: " + localPort);
 			
-			RMAddresses.add(new Tuple<InetAddress, Integer, String>(InetAddress.getLocalHost(), 4123, "PA"));
-			RMAddresses.add(new Tuple<InetAddress, Integer, String>(InetAddress.getLocalHost(), 4124, "Jonathan"));
-			RMAddresses.add(new Tuple<InetAddress, Integer, String>(InetAddress.getLocalHost(), 4125, "Derek"));
+			
+			RMAddresses.add(new Tuple<InetAddress, Integer, String>(RM1Address, RM1Port, "PA"));
+			RMAddresses.add(new Tuple<InetAddress, Integer, String>(RM2Address, RM2Port, "Jonathan"));
+			RMAddresses.add(new Tuple<InetAddress, Integer, String>(RM3Address, RM3Port, "Derek"));
 	}
 	
 	public void shutdown() {
@@ -61,7 +78,7 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 		sendAnswerMessage(msg, sequencerAddress, sequencerPort);
 		
 		try {
-			String reply = recieveReply(socket);
+			String reply = receiveReply(socket);
 			
 			return reply;
 		} catch (IOException e) {
@@ -78,7 +95,7 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 		sendAnswerMessage(msg, sequencerAddress, sequencerPort);
 		
 		try {
-			String reply = recieveReply(socket);
+			String reply = receiveReply(socket);
 			
 			return reply;
 		} catch (IOException e) {
@@ -95,7 +112,7 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 		sendAnswerMessage(msg, sequencerAddress, sequencerPort);
 		
 		try {
-			String reply = recieveReply(socket);
+			String reply = receiveReply(socket);
 			
 			return reply;
 		} catch (IOException e) {
@@ -111,7 +128,7 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 		sendAnswerMessage(msg, sequencerAddress, sequencerPort);
 		
 		try {
-			String reply = recieveReply(socket);
+			String reply = receiveReply(socket);
 			String[] replyArray = reply.replace("[", "").replace("]", "").split(", ");
 			return replyArray;
 		} catch (IOException e) {
@@ -127,7 +144,7 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 		sendAnswerMessage(msg, sequencerAddress, sequencerPort);
 		
 		try {
-			String reply = recieveReply(socket);
+			String reply = receiveReply(socket);
 			
 			return reply;
 		} catch (IOException e) {
@@ -136,8 +153,6 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 		
 	}
 	
-	   
-  
    public String AddItem(String managerId, String itemId, String itemName, int quantity, double price) {
 		String msgArguments = "ADD" + "," + managerId + "," + itemId + "," + itemName + "," + quantity + "," + price;
 		String msg = buildMessage(localAddress, localPort, msgArguments);
@@ -145,7 +160,7 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 		sendAnswerMessage(msg, sequencerAddress, sequencerPort);
 		
 		try {
-			String reply = recieveReply(socket);
+			String reply = receiveReply(socket);
 			
 			return reply;
 		} catch (IOException e) {
@@ -160,7 +175,7 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 		sendAnswerMessage(msg, sequencerAddress, sequencerPort);
 		
 		try {
-			String reply = recieveReply(socket);
+			String reply = receiveReply(socket);
 			
 			return reply;
 		} catch (IOException e) {
@@ -176,7 +191,7 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 		sendAnswerMessage(msg, sequencerAddress, sequencerPort);
 		
 		try {
-			String reply = recieveReply(socket);
+			String reply = receiveReply(socket);
 			String[] replyArray = reply.replace("[", "").replace("]", "").split(", ");
 			return replyArray;
 		} catch (IOException e) {
@@ -190,7 +205,7 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
      * @param requestAddress the InetAdress of the machine
      * @param requestPort the port to connect to
      */
-	public static void sendReceivedMessage(InetAddress requestAddress, int requestPort) {
+	public void sendReceivedMessage(InetAddress requestAddress, int requestPort) {
         try (DatagramSocket sendSocket = new DatagramSocket()) {
             byte[] resultBytes = String.format("RECEIVED").getBytes();
             DatagramPacket request = new DatagramPacket(resultBytes, resultBytes.length, requestAddress, requestPort);
@@ -209,20 +224,22 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
      * @param requestPort the port to connect to
      */
     
-    public static void sendAnswerMessage(String message, InetAddress requestAddress, int requestPort) {
+    public void sendAnswerMessage(String message, InetAddress requestAddress, int requestPort) {
         boolean not_received = true;
         byte[] resultBytes = message.getBytes();
         DatagramPacket request = new DatagramPacket(resultBytes, resultBytes.length, requestAddress, requestPort);
         try (DatagramSocket sendSocket = new DatagramSocket()) {
             sendSocket.setSoTimeout(resendDelay);
             while (not_received) {
+            	this.stopwatch = System.nanoTime();
                 sendSocket.send(request);
                 try {
                     byte[] buffer = new byte[1000];
                     DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
                     sendSocket.receive(reply);
                     String answer = new String(reply.getData());
-                    if (answer.toUpperCase().equals("RECEIVED")) {
+                    answer = answer.trim();
+                    if (answer.equalsIgnoreCase("RECEIVED")) {
                         not_received = false;
                     }
                 } catch (SocketTimeoutException e) {
@@ -253,23 +270,31 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 		return null;
     }
     
-    private String recieveReply(DatagramSocket socket) throws IOException {
+    private String receiveReply(DatagramSocket socket) throws IOException {
     	int expectedReplies = RMAddresses.size();
     	ArrayList<Tuple<InetAddress, Integer, String>> repliedRM = new ArrayList<Tuple<InetAddress, Integer, String>>(); 
     	boolean continueRecieving = true;
     	String answer;
+    	long timeoutTime = 0;
     	
     	try {
     		while(continueRecieving) {
     			byte[] buffer = new byte[1000];
                 DatagramPacket request = new DatagramPacket(buffer, buffer.length);
                 socket.receive(request);
-                Tuple<InetAddress, Integer, String> RMAddress = new Tuple<InetAddress, Integer, String>(request.getAddress(), request.getPort(), new String(request.getData()));
+                
+                long timeToReply = System.currentTimeMillis() - stopwatch; 
+                		
+                String msg = new String(request.getData());
+                Tuple<InetAddress, Integer, String> RMAddress = new Tuple<InetAddress, Integer, String>(request.getAddress(), request.getPort(), msg.trim());
                 
                 if (!repliedRM.contains(RMAddress)) {
                 	repliedRM.add(RMAddress);
                     sendReceivedMessage(request.getAddress(), request.getPort());
                 }
+                
+                if (timeoutTime == 0 || timeToReply > timeoutTime)
+                	socket.setSoTimeout((int) timeToReply * 2);
                 
                 if (expectedReplies == repliedRM.size())
                 	continueRecieving = false;
@@ -281,13 +306,11 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
     		return answer;
     		
         } catch (SocketException ex) {
-            System.out.println("Could not connect to port, canceling server");
-            System.exit(1);
+        	answer = getMajority(repliedRM);
+    		return answer;
         } catch (IOException ex) {
         	throw ex;
         }
-    	
-		return "";
     }
     
     private String getMajority(ArrayList<Tuple<InetAddress, Integer, String>> repliedRM) {
@@ -304,6 +327,14 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 			}else {
 				counter--;
 			}
+			
+		}
+		
+		if (repliedRM.size() < RMAddresses.size()) {
+			ArrayList<Tuple<InetAddress, Integer, String>> copy = new ArrayList<Tuple<InetAddress, Integer, String>>(RMAddresses);
+			copy.removeAll(repliedRM);
+			Tuple<InetAddress, Integer, String> missingRM = copy.get(0);
+			notifyCrash(missingRM.getLeft(), missingRM.getMiddle());
 			
 		}
 		
@@ -325,7 +356,18 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
     private void notifyFail(InetAddress address, int port) {
     	
     	for (Tuple<InetAddress, Integer, String> r: RMAddresses) {
-    		String msgArguments = "FAILURE" + "," + address + ", " + port;
+    		String msgArguments = "ERROR" + "," + address + ", " + port;
+    		String msg = buildMessage(address, port, msgArguments);
+    		new Thread(() -> {
+    			sendAnswerMessage(msgArguments, r.getLeft(), r.getMiddle());
+            }).start();
+    	}
+    }
+    
+    private void notifyCrash(InetAddress address, int port) {
+    	
+    	for (Tuple<InetAddress, Integer, String> r: RMAddresses) {
+    		String msgArguments = "CRASH" + "," + address + ", " + port;
     		String msg = buildMessage(address, port, msgArguments);
     		new Thread(() -> {
     			sendAnswerMessage(msgArguments, r.getLeft(), r.getMiddle());
@@ -334,7 +376,7 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
     }
     
     
-    private static String buildMessage(InetAddress address, int port, String arguments) {
+    private String buildMessage(InetAddress address, int port, String arguments) {
 		return address.toString() + "," + Integer.toString(port) + ";" + arguments;
 	}
 	
@@ -366,6 +408,38 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 		
 		return logger;
 	}
+	
+	
+	private void ReadAddresses() throws UnknownHostException, FileNotFoundException {
+		Scanner fScn = new Scanner(new File("addresses.txt"));
+	     String data;
+
+	      while( fScn.hasNextLine() ){
+	           data = fScn.nextLine();
+
+	           String[] token = data.split(",");
+	           this.localAddress = InetAddress.getByName(token[0]);
+	           this.localPort = Integer.parseInt(token[1]);
+	           
+	           this.sequencerAddress = InetAddress.getByName(token[2]);
+	           this.sequencerPort = Integer.parseInt(token[3]);
+	           
+	           this.RM1Address = InetAddress.getByName(token[4]);
+	           this.RM1Port = Integer.parseInt(token[5]);
+	           
+	           this.RM2Address = InetAddress.getByName(token[6]);
+	           this.RM2Port = Integer.parseInt(token[7]);
+	           
+	           this.RM3Address = InetAddress.getByName(token[8]);
+	           this.RM3Port = Integer.parseInt(token[9]);
+	           
+	           
+	       
+	      }
+	      fScn.close();
+	}
+	
+	
 	
 }
 
