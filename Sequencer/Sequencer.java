@@ -57,6 +57,56 @@ public class Sequencer {
         this.sequencerSocket = new DatagramSocket(this.sequencerPort, this.sequencerAddress);
     }
 
+    /**
+     * Sends a received message to a process.
+     *
+     * @param requestAddress the InetAdress of the machine
+     * @param requestPort the port to connect to
+     */
+	public void sendReceivedMessage(InetAddress requestAddress, int requestPort) {
+        try (DatagramSocket sendSocket = new DatagramSocket()) {
+            byte[] resultBytes = String.format("RECEIVED").getBytes();
+            DatagramPacket request = new DatagramPacket(resultBytes, resultBytes.length, requestAddress, requestPort);
+            sendSocket.send(request);
+        } catch (IOException ex) {
+        }
+    }
+
+    /**
+     * Sends a reliable UDP request to another machine. This is reliable since
+     * it sends the message, and if no response it returned in
+     * 'ReplicaManager.resendDelay' amount of time then the message is resent.
+     *
+     * @param message the message to be sent through UDP request
+     * @param requestAddress the InetAddress of the machine
+     * @param requestPort the port to connect to
+     */
+    
+    public void sendAnswerMessage(String message, InetAddress requestAddress, int requestPort) {
+        boolean not_received = true;
+        byte[] resultBytes = message.getBytes();
+        DatagramPacket request = new DatagramPacket(resultBytes, resultBytes.length, requestAddress, requestPort);
+        try (DatagramSocket sendSocket = new DatagramSocket()) {
+            sendSocket.setSoTimeout(resendDelay);
+            while (not_received) {
+            	this.stopwatch = System.nanoTime();
+                sendSocket.send(request);
+                try {
+                    byte[] buffer = new byte[1000];
+                    DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
+                    sendSocket.receive(reply);
+                    String answer = new String(reply.getData());
+                    answer = answer.trim();
+                    if (answer.equalsIgnoreCase("RECEIVED")) {
+                        not_received = false;
+                    }
+                } catch (SocketTimeoutException e) {
+                }
+            }
+        } catch (IOException ex) {
+        }
+    }
+
     public void run() throws IOException {
 
         boolean not_received = true;
