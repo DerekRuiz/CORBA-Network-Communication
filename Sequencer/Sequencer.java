@@ -106,6 +106,11 @@ public class Sequencer {
 
         }
     }
+    public static void main(String args[]){
+        Sequencer seq = new Sequencer();
+        seq.run();
+    }
+
 
 
 }
