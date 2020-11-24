@@ -10,15 +10,6 @@ import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
-import org.omg.CosNaming.*;
-import org.omg.CosNaming.NamingContextPackage.*;
-import org.omg.CORBA.*;
-import org.omg.PortableServer.*;
-import org.omg.PortableServer.POA;
-
-import shared.ServerInterface;
-import shared.ServerInterfaceHelper;
-
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -26,12 +17,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Queue;
 
-public class StoreServer extends shared.ServerInterfacePOA{
-
-	private org.omg.CORBA.ORB orb = null;
+public class StoreServer{
 	
 	private String region;
 	
@@ -47,13 +35,12 @@ public class StoreServer extends shared.ServerInterfacePOA{
 	private Map<String, Queue<String>> waitList = new HashMap<String, Queue<String>>();
 	
 	
-	public StoreServer(String _region, ORB orb) throws AlreadyBoundException, IOException{
-		super();
+	public StoreServer(String _region, int _port) throws AlreadyBoundException, IOException{
+			super();
 		
-			this.region = _region;
+			region = _region;
 			
-			port= getPort(_region);
-			this.orb = orb;
+			port= _port;
 			
 			log = initiateLogger();
 			log.info("Server starting-up.");
@@ -79,10 +66,6 @@ public class StoreServer extends shared.ServerInterfacePOA{
 		
 	}
 	
-	public void shutdown() {
-		this.orb.shutdown(false);
-	}
-	
 	
 	
 	public String ReturnItem (String customerId, String itemId, String dateOfReturn) {
@@ -93,8 +76,10 @@ public class StoreServer extends shared.ServerInterfacePOA{
 				
 				Customer customer = customerList.get(customerId);
 				
-				if (customer == null)
-					throw new SecurityException();
+				if (customer == null) {
+					customer = new Customer(customerId, region);
+					customerList.put(customerId, customer);
+				}
 				
 				Product product = productList.get(itemId);
 				if (product == null) {
@@ -150,8 +135,10 @@ public class StoreServer extends shared.ServerInterfacePOA{
 		
 		Customer customer = customerList.get(customerId);
 		
-		if (customer == null)
-			throw new SecurityException();
+		if (customer == null) {
+			customer = new Customer(customerId, region);
+			customerList.put(customerId, customer);
+		}
 		
 		String returnMessage, purchaseMessage;
 		
@@ -193,8 +180,10 @@ public class StoreServer extends shared.ServerInterfacePOA{
 		String itemRegion = ExtractRegion(itemId);
 		
 		Customer customer = customerList.get(customerId);
-		if (customer == null)
-			throw new SecurityException();
+		if (customer == null) {
+			customer = new Customer(customerId, region);
+			customerList.put(customerId, customer);
+		}
 		
 		if (itemRegion.equalsIgnoreCase(region))
 		{
@@ -252,8 +241,10 @@ public class StoreServer extends shared.ServerInterfacePOA{
 			
 			Customer customer = customerList.get(customerId);
 			
-			if (customer == null)
-				throw new SecurityException();
+			if (customer == null) {
+				customer = new Customer(customerId, region);
+				customerList.put(customerId, customer);
+			}
 			
 			else {
 				
@@ -363,7 +354,7 @@ public class StoreServer extends shared.ServerInterfacePOA{
 			Manager manager = managerList.get(managerId);
 			
 			if (manager == null)
-				throw new SecurityException();
+				return "ERROR: Non manager accessing add item";
 			
 			else
 			{
@@ -372,19 +363,24 @@ public class StoreServer extends shared.ServerInterfacePOA{
 				if (itemRegion.equalsIgnoreCase(region))
 				{
 					Product product = productList.get(itemId);
+					
+					
 					if (product == null)
 					{
 						product = new Product(itemId, itemName, quantity, price);
 						productList.put(itemId, product);
 						
 						log.info(logMethod + " returns Added");
-						return "Added";
 					}
 					
 					else
 					{
-						if (quantity >= 0)
-						{
+						if (!product.getDescription().equalsIgnoreCase(itemName))
+							return String.format("ERROR: Added item name %s does not match item with id %s", itemName, itemId);
+						
+						else if (product.getPrice() != price)
+							return String.format("ERROR: Added item price %f does not match item with id %s", price, itemId);
+						else {
 							int oldQuantity = product.getQuantity();
 							
 							setProductQuantity(product, quantity);
@@ -400,23 +396,15 @@ public class StoreServer extends shared.ServerInterfacePOA{
 								}
 							
 							log.info(logMethod + " returns Updated");
-							return "Updated";
 						}
-						else
-						{
-							productList.remove(itemId);
-							waitList.remove(itemId);
-							
-							log.info(logMethod + " returns Deleted");
-							return "Deleted";
-						}
-							
 					}
+					
+					return String.format("SUCCESS: Added %d item %s to store", quantity, itemId);
 					
 				}
 				else {
 					log.info(logMethod + " returns WrongItemRegion");
-					return "WrongItemRegion";
+					return String.format("ERROR: Adding item ID %s to location %s", itemId, this.region);
 				}
 					
 					
@@ -1012,8 +1000,6 @@ public class StoreServer extends shared.ServerInterfacePOA{
 		c.setBudget(budget);
 	}
 	
-	
-	
 	private LinkedList<Product> SearchItem(String itemDescription) {
 		
 		LinkedList<Product> matches = new LinkedList<Product>();
@@ -1126,83 +1112,5 @@ public class StoreServer extends shared.ServerInterfacePOA{
 	private String ExtractRegion(String id) {
 		return id.substring(0,2);
 	}
-	
-	public static void main(String args[]) {
-		   
-	      try{   
-	    	  	String[] regions = {"QC", "ON", "BC"};
-	    	  
-	    	 // 	Properties properties = new Properties();
-				
-			//	properties.put("org.omg.CORBA.ORBInitialHost", "localhost");
-				//properties.put("org.omg.CORBA.ORBInitialPort", "1050");
-    	  		ORB orb = ORB.init(args, null);
-				
-				//2. Get reference to RootPOA and activate the POAManager
-				POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
-				rootPOA.the_POAManager().activate();
-	    	 
-		    	  for (int i = 0; i < regions.length; i++)
-		    	  {
-		    		  Thread t = new Thread(new Runnable() {
-		  			    private String region;
-		  			    public Runnable init(String _region) {
-		  			        this.region = new String(_region);
-		  			        return this;
-		  			    }
-		  			    @Override
-		  			    public void run() {
-		  			    	createThread();
-		  			    }
-		  			    
-		  			    public synchronized void createThread() {
-		  			    	try {
-							
-								StoreServer t = new StoreServer(this.region, orb);
-								
-								
-								org.omg.CORBA.Object ref = rootPOA.servant_to_reference(t);
-								
-								//8. Cast the reference to a CORBA reference
-								 ServerInterface href = ServerInterfaceHelper.narrow(ref);
-								
-								//9. Bind the Object Reference in Naming
-								org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
-								
-								NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
-								
-								NameComponent path[] = ncRef.to_name(this.region);
-								ncRef.rebind(path, href);
-								
-								
-								
-								
-								 System.out.println("Server created at " + this.region);
-							} catch (Exception e) {
-							
-							}
-		  			    }
-		  			}.init(regions[i]));
-		    		
-		    		t.start();
-		    	  }
-		    	  
-		    	  Thread.sleep(4000);
-		    	  orb.run();
-	    	  
-	 		   // code for obtaining RMI port number value omitted
-	         
-	      }// end try
-	      catch (Exception re) {
-	         System.out.println(
-	            "Exception in SomeServer.main: " + re);
-	      } // end catch
-	
-	
-	}
-
-	
-
-	
 
 }
