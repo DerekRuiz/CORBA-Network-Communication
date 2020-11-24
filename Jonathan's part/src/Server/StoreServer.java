@@ -13,18 +13,19 @@ import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
-public class Store {
+public class StoreServer {
 
     public String branchID;
+    int port;
     public HashMap<String, Item> itemList;
     public Logger logger;
     public HashMap<String, Customer> customerList = new HashMap<>();
     public ArrayList<String[]> purchaseLogs = new ArrayList<>();
 
-    public Store(String branchID, HashMap<String, Item> itemList) {
+    public StoreServer(String branchID, int port) {
 
         this.branchID = branchID;
-        this.itemList = itemList;
+        this.port = port;
 
         this.logger = this.initiateLogger();
         this.logger.info("Initializing Server ...");
@@ -60,23 +61,28 @@ public class Store {
 
     public String addItem(String managerID, String itemID, String name, int quantity, int price) {
 
+        if(managerID.charAt(2) != 'M'){
+            logger.info("ERROR: Non manager accessing add item");
+            return "ERROR: Non manager accessing add item";
+        }
+
         Item item = itemList.get(itemID);
         String result;
 
         if (item != null) {
 
             if (!item.name.equals(name)) {
-                result = "Item name does not match. Operation failed.";
+                result = "ERROR: Added item name " +name + " does not match item with id " + itemID;
             } else if (item.price != price) {
-                result = "Item price does not match. Operation failed.";
+                result = "ERROR: Added item price " + price + " does not match item with id " + itemID;
             } else {
                 item.quantity += quantity;
-                result = "Item already exists. Quantity was increased. Operation successful.";
+                result = "SUCCESS: Added " + quantity + " item " + itemID + " to store";
             }
         } else {
             Item newItem = new Item(itemID, name, quantity, price);
             itemList.put(itemID, newItem);
-            result = "Item was added to the store. Operation successful.";
+            result = "SUCCESS: Added " + quantity + " item " + itemID + " to store";
         }
         this.logger.info("addItem() called. Parameters: " + managerID + " " + itemID + " " + name + " " + quantity + " " + price + "\nStatus: " + result);
         return result;
@@ -84,21 +90,32 @@ public class Store {
 
     public String removeItem(String managerID, String itemID, int quantity) {
 
+        if(managerID.charAt(2) != 'M'){
+            logger.info("ERROR: Non manager accessing remove item");
+            return "ERROR: Non manager accessing remove item";
+        }
+
         Item item = itemList.get(itemID);
         String result;
 
         if (item != null) {
             item.quantity -= quantity;
             if (item.quantity < 0) item.quantity = 0;
-            result = "Quantity was decreased. Operation successful.";
+            result = "SUCCESS: Removed " + quantity + " items " + itemID + " from the store";
         } else {
-            result = "Item does not exist. Operation failed.";
+            result = "ERROR: Removed item ID " + itemID + " does not exist in store";
         }
         this.logger.info("removeItem() called. Parameters: " + managerID + " " + itemID + " " + quantity + "\nStatus: " + result);
         return result;
     }
 
     public String listItemAvailability(String managerID) {
+
+        if(managerID.charAt(2) != 'M'){
+            logger.info("ERROR: Non manager accessing list available items");
+            return "ERROR: Non manager accessing list available items";
+        }
+
         StringBuilder result = new StringBuilder();
         for (String key : itemList.keySet()) {
             result.append(itemList.get(key).toString()).append("\n");
@@ -109,7 +126,12 @@ public class Store {
 
     public synchronized String purchaseItem(String customerID, String itemID, String dateOfPurchase) {
 
-        String result = "purchaseItem() called. Parameters: " + customerID + " " + itemID + " " + dateOfPurchase + "\nStatus: ";
+        if(customerID.charAt(2) != 'U'){
+            logger.info("ERROR: Non customer accessing purchase item");
+            return "ERROR: Non customer accessing purchase item";
+        }
+
+        String result="";
         String item_branchID = itemID.substring(0, 2);
 
         Customer customer;
@@ -123,10 +145,10 @@ public class Store {
         if (item_branchID.equals(this.branchID)) {
 
             if (!itemList.containsKey(itemID)) {
-                result += "Item not present in the store.";
+                result += "ERROR: Purchased item ID " + itemID + " does not exist in store";
                 return result;
             } else if (itemList.get(itemID).quantity == 0) {
-                result += "Item is unavailable at this moment.";
+                result += "ERROR: Not enough of item " + itemID+ ", contacting customer";
                 //waitlist
                 return result;
             } else {
@@ -135,9 +157,9 @@ public class Store {
                     itemList.get(itemID).quantity--;
                     String[] purchaseLog = {customerID, itemID, dateOfPurchase};
                     purchaseLogs.add(purchaseLog);
-                    result += "Purchase successful in " + this.branchID + " Store. Your budget is now " + customer.budget;
+                    result += "SUCCESS: Purchased item " + itemID + " from sever " + item_branchID;
                 } else {
-                    result += "Budget is insufficient. Operation failed.";
+                    result += "ERROR: Customer could not afford item " + itemID;
                 }
             }
         } else {
@@ -187,7 +209,7 @@ public class Store {
         else if (itemList.get(itemID).quantity == 0)
             result = "Item is unavailable at the moment";
         else if(customerOnePurchaseLimit)
-            result = "You have already purchased an item in this store.";
+            result = "ERROR: Cannot purchase multiple items from inter-province store";
         else {
             itemList.get(itemID).quantity--;
             String[] purchaseLog = {customerID, itemID, dateOfPurchase};
@@ -198,6 +220,10 @@ public class Store {
     }
 
     public synchronized String findItem(String customerID, String itemName) {
+        if(customerID.charAt(2) != 'U'){
+            logger.info("ERROR: Non customer accessing find item");
+            return "ERROR: Non customer accessing find item";
+        }
         StringBuilder result = new StringBuilder("findItem() called. Parameters: " + customerID + " " + itemName + "\n");
 
         boolean contained = false;
@@ -261,7 +287,12 @@ public class Store {
 
     public String returnItem(String customerID, String itemID, String dateOfReturn) {
 
-        String result = "returnItem() called. Parameters: " + customerID + " " + itemID + " " + dateOfReturn + "\nStatus: ";
+        if(customerID.charAt(2) != 'U'){
+            logger.info("ERROR: Non customer accessing return item");
+            return "ERROR: Non customer accessing return item";
+        }
+
+        String result = "";
         String item_branchID = itemID.substring(0, 2);
 
         Customer customer;
@@ -285,19 +316,19 @@ public class Store {
                         itemList.get(itemID).quantity++;
                         customer.budget += itemList.get(itemID).price;
                         purchaseLogs.remove(i);
-                        result += "Return successful in " + branchID + " Store. Your budget is now: " + customer.budget;
+                        result += "SUCCESS: Customer returned item " + itemID;
                         this.logger.info(result);
                         return result;
                     }
                     else{
-                        result += "Purchase was made more than 30 days ago. Return unsuccesssful.";
+                        result += "ERROR: Returned item " + itemID + " has passed return policy deadline";
                         this.logger.info(result);
                         return result;
                     }
 
                 }
             }
-            result += "item has not been purchased by this user.";
+            result += "ERROR: Date of purchase was not found from customer";
             this.logger.info(result);
             return result;
 
@@ -368,6 +399,11 @@ public class Store {
     }
 
     public String exchangeItem(String customerID, String newItemID, String oldItemId) {
+
+        if(customerID.charAt(2) != 'U'){
+            logger.info("ERROR: Non customer accessing return item");
+            return "ERROR: Non customer accessing return item";
+        }
         String result = "exchangeItem() called. Parameters: " + customerID + " " + newItemID + " " + oldItemId + "\nStatus: ";
         LocalDate date = LocalDate.now();
         result += this.returnItem(customerID, oldItemId, date.toString()) + "\n";
