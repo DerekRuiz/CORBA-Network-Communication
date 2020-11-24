@@ -117,6 +117,8 @@ public class Sequencer {
             buffer = new byte[1000];
             DatagramPacket FE_request = new DatagramPacket(buffer, buffer.length);
             sequencerSocket.receive(FE_request);
+            sendReceivedMessage(localAddress, localPort);
+
             String request = new String(FE_request.getData());
 
             String[] splitMessage = request.split("|");
@@ -152,7 +154,7 @@ public class Sequencer {
                     }
                 } catch (SocketTimeoutException e) {
                 }
-            }
+            }==
 
         }
     }
