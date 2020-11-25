@@ -51,9 +51,9 @@ public class ReplicaManager {
     }
 
     public ReplicaManager(InetAddress address, int port, boolean willFailure, boolean willCrash) {
-        qcStore = new StoreServer("QC", 5461);
-        onStore = new StoreServer("ON", 5462);
-        bcStore = new StoreServer("BC", 5463);
+        qcStore = new StoreServer("QC", port + 10);
+        onStore = new StoreServer("ON", port + 20);
+        bcStore = new StoreServer("BC", port + 30);
         try {
             this.replicaSocket = new DatagramSocket(port, address);
         } catch (SocketException ex) {
@@ -179,7 +179,7 @@ public class ReplicaManager {
             InetAddress senderAddress = InetAddress.getByName(args[0]);
             int senderPort = Integer.parseInt(args[1]);
             int processID = Integer.parseInt(args[2]);
-            
+
             // Ensures that no duplicate message is processed.
             if (processID < this.nextProcessID) {
                 return;
@@ -214,20 +214,21 @@ public class ReplicaManager {
         }
 
         String result;
+        String[] results;
         switch (args[0].trim().toUpperCase()) {
             case "ADD":
-                if (willFailure) {
-                    result = "ERROR";
-                } else {
-                    result = usersStore.addItem(args[1].trim(), args[2].trim(), args[3].trim(), Integer.parseInt(args[4].trim()), Double.parseDouble(args[5].trim()));
-                }
+                result = usersStore.addItem(args[1].trim(), args[2].trim(), args[3].trim(), Integer.parseInt(args[4].trim()), Double.parseDouble(args[5].trim()));
                 break;
             case "REMOVE":
                 result = usersStore.removeItem(args[1].trim(), args[2].trim(), Integer.parseInt(args[3].trim()));
                 break;
             case "LIST":
-                String[] results = usersStore.listItemAvailability(args[1].trim());
-                result = Arrays.toString(results);
+                if (willFailure) {
+                    result = "ERROR";
+                } else {
+                    results = usersStore.listItemAvailability(args[1].trim());
+                    result = Arrays.toString(results);
+                }
                 break;
             case "PURCHASE":
                 result = usersStore.purchaseItem(args[1].trim(), args[2].trim(), args[3].trim());
@@ -331,10 +332,10 @@ public class ReplicaManager {
     private void restartReplicas() {
         System.out.println("restarting");
         sendPauseProcessing();
-        
+
         this.willCrash = false;
         this.willFailure = false;
-        
+
         qcStore.close();
         onStore.close();
         bcStore.close();
@@ -344,7 +345,7 @@ public class ReplicaManager {
         for (String query : storedCommands) {
             this.callMethod(query);
         }
-        
+
         sendResumeProcessing();
         System.out.println("complete");
     }
