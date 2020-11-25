@@ -26,6 +26,8 @@ public class StoreServer{
 	private static int port;
 	private Logger log = null;
 	
+	private DatagramSocket socket = new DatagramSocket(getPort(region));
+	
 	private Map<String, Customer> customerList = new HashMap<String, Customer>();
 	private Map<String, Manager> managerList = new HashMap<String, Manager>();
 	private Map<String, Product> productList = new HashMap<String, Product>();
@@ -272,6 +274,7 @@ public class StoreServer{
 						LinkedList<Product> foundMatches = (LinkedList<Product>) inputStream.readObject();
 						
 						matches.addAll(foundMatches);
+						socket.close();
 					 }
 					 	
 		    	 }
@@ -499,7 +502,7 @@ public class StoreServer{
 	   private void InitializeServerListener(String region) {
 		   try {
 
-			   DatagramSocket socket = new DatagramSocket(getPort(region));
+			  
 			   byte[] buffer = new byte[10000];
 			   
 			   while(true){
@@ -775,6 +778,7 @@ public class StoreServer{
 			socket.receive(r);
 			
 			String status = new String(r.getData());
+			socket.close();
 			return status;
 		}
 	
@@ -812,7 +816,7 @@ public class StoreServer{
 							
 							String replyMessage = new String(r.getData());
 							replyMessage = replyMessage.trim();
-							
+							socket.close();
 							if (replyMessage.equalsIgnoreCase("Completed"))
 							{
 								setProductQuantity(product, product.getQuantity() - 1);
@@ -937,6 +941,8 @@ public class StoreServer{
 			socket.receive(r);
 			
 			String status = new String(r.getData());
+			
+			socket.close();
 			return status;
 		}
 		catch (Exception ex) {
@@ -1042,6 +1048,8 @@ public class StoreServer{
 			socket.receive(r);
 			
 			Double price = ByteBuffer.wrap(r.getData()).getDouble();
+			
+			socket.close();
 			return price;
 			}
 			catch (Exception ex) {
@@ -1088,6 +1096,8 @@ public class StoreServer{
 				socket.receive(r);
 				
 				String status = new String(r.getData());
+				
+				socket.close();
 				if (status.contains("Reserved"))
 					return true;
 				else
@@ -1101,6 +1111,10 @@ public class StoreServer{
 		
 		
 			
+	}
+	
+	private void close() {
+		socket.close();
 	}
 
 
