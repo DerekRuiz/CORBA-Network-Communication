@@ -275,9 +275,10 @@ public class ReplicaManager {
     private void sendAnswerMessage(String message, InetAddress requestAddress, int requestPort) {
 
         boolean not_received = true;
+        String header = String.format("%s,%d;", replicaSocket.getLocalAddress().getHostAddress(), replicaSocket.getLocalPort());
+        message = header + message;
         byte[] resultBytes = message.getBytes();
         DatagramPacket request = new DatagramPacket(resultBytes, resultBytes.length, requestAddress, requestPort);
-
         try (DatagramSocket sendSocket = new DatagramSocket()) {
             sendSocket.setSoTimeout(ReplicaManager.resendDelay);
             while (not_received) {
@@ -300,13 +301,13 @@ public class ReplicaManager {
 
     private void sendPauseProcessing() {
         for (RM rm : group) {
-            sendAnswerMessage(";PAUSE_MESSAGES", rm.address, rm.port);
+            sendAnswerMessage("PAUSE_MESSAGES", rm.address, rm.port);
         }
     }
 
     private void sendResumeProcessing() {
         for (RM rm : group) {
-            sendAnswerMessage(";RESUME_MESSAGES", rm.address, rm.port);
+            sendAnswerMessage("RESUME_MESSAGES", rm.address, rm.port);
         }
     }
 
