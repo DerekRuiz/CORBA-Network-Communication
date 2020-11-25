@@ -6,9 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.*;
 import java.rmi.AlreadyBoundException;
-import java.util.logging.FileHandler;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -24,7 +21,6 @@ public class StoreServer{
 	private String region;
 	
 	private static int port;
-	private Logger log = null;
 	
 	private DatagramSocket socket = new DatagramSocket(getPort(region));
 	
@@ -43,12 +39,6 @@ public class StoreServer{
 			region = _region;
 			
 			port= _port;
-			
-			log = initiateLogger();
-			log.info("Server starting-up.");
-			
-			
-			log.info("Server started up with port: " + port);
 			InitializeStore(region);
 			
 			Thread t = new Thread(new Runnable() {
@@ -78,68 +68,60 @@ public class StoreServer{
 				
 				Customer customer = customerList.get(customerId);
 				
-				if (customer == null) {
-					customer = new Customer(customerId, region);
-					customerList.put(customerId, customer);
-				}
-				
 				Product product = productList.get(itemId);
-				if (product == null) {
-					return "Product missing";
-				}
 				
-				else {
-					LinkedList<Tuple<String, Date, Double>> purchasedProducts = customer.getPurchasedProducts();
+				LinkedList<Tuple<String, Date, Double>> purchasedProducts = customer.getPurchasedProducts();
+				
+				for (int i = purchasedProducts.size() - 1; i >= 0; i--) {
 					
-					for (int i = purchasedProducts.size() - 1; i >= 0; i--) {
+					Tuple<String, Date, Double> node = purchasedProducts.get(i);
+					String itemRegion = ExtractRegion(itemId);
+					if (node.getLeft().equalsIgnoreCase(itemId) && itemRegion.equalsIgnoreCase(region)) {
 						
-						Tuple<String, Date, Double> node = purchasedProducts.get(i);
-						String itemRegion = ExtractRegion(itemId);
-						if (node.getLeft().equalsIgnoreCase(itemId) && itemRegion.equalsIgnoreCase(region)) {
-							
-							setProductQuantity(product, product.getQuantity() + 1);
-				        	setCustomerBudget(customer, customer.getBudget() + node.getRight());
-				        	 
-				        	purchasedProducts.remove(i);
-				        	try {
-								UpdateWaitList(itemId);
-							} catch (IOException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-					        return "Refunded";
+						setProductQuantity(product, product.getQuantity() + 1);
+			        	setCustomerBudget(customer, customer.getBudget() + node.getRight());
+			        	 
+			        	purchasedProducts.remove(i);
+			        	try {
+							UpdateWaitList(itemId);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
 						}
-						
-						else if(node.getLeft().equalsIgnoreCase(itemId)){
-							
-							replyMessage = ReturnItemAtDifferentStore(customerId, itemId);
-							if (replyMessage.equalsIgnoreCase("Returned")) {
-								setCustomerBudget(customer, customer.getBudget() + node.getRight());
-				        	 	purchasedProducts.remove(i);
-							}
-							else
-								return replyMessage;
-						}
-						
+				        return String.format("SUCCESS: Customer returned item %s", itemId);
 					}
-					return "NotFound";
+					
+					else if(node.getLeft().equalsIgnoreCase(itemId)){
+						
+						replyMessage = ReturnItemAtDifferentStore(customerId, itemId);
+						if (replyMessage.contains("SUCCESS")) {
+							setCustomerBudget(customer, customer.getBudget() + node.getRight());
+			        	 	purchasedProducts.remove(i);
+			        	 	return replyMessage;
+						}
+						else
+							return replyMessage;
+					}
+					
+					else
+						return "Denied";
+					
 				}
 			}
 			else
 				return replyMessage;
+			
+			return replyMessage;
 		}
 		
 	
 	
 	public String exchangeItem(String customerId, String newItemId, String oldItemId, String dateOfReturn) {
-		String logMethod = "exchangeItem(" + customerId + ", " + newItemId + ", " + oldItemId +")";
-		log.info(logMethod + " has been invoked");
 		
 		Customer customer = customerList.get(customerId);
 		
 		if (customer == null) {
-			customer = new Customer(customerId, region);
-			customerList.put(customerId, customer);
+			String.format("ERROR: Non customer accessing return item");
 		}
 		
 		String returnMessage, purchaseMessage;
@@ -151,20 +133,25 @@ public class StoreServer{
 			double oldItemPrice = getProductPrice(oldItemId);
 			double newItemPrice = getProductPrice(newItemId);
 			
-			if (oldItemPrice < 0)
-				return "OldProductMissing";
-			else if (newItemPrice < 0)
-				return "NewProductMissing";
+			if (newItemPrice < 0)
+				return String.format("ERROR: New item %s does not exists", newItemId);
 			else if (budget + oldItemPrice < newItemPrice)
-				return "MissingFunds";
+				return String.format("ERROR: Customer %s does not have enough budget to exhange item %s with item %s", customerId, oldItemId, newItemId);
 			else {
 				boolean isReserved = ReserveItem(customerId, newItemId);
 				if (isReserved) 
 				{
 					returnMessage = ReturnItem(customerId, oldItemId, dateOfReturn);
+					if (!returnMessage.contains("SUCCESS"))
+						return returnMessage;
+					
+					
 					purchaseMessage = PurchaseItem(customerId, newItemId, dateOfReturn);
-					log.info(logMethod + " returns Exchanged");
-					return "Exchanged";
+					if (!purchaseMessage.contains("SUCCESS"))
+						return purchaseMessage;
+					
+					return String.format("SUCCESS: Customer %s exchanged item %s with item %s", customerId, oldItemId, newItemId);
+					
 				}
 				else
 					return "CannotReserve";
@@ -175,9 +162,6 @@ public class StoreServer{
 	}
 	
 	public String PurchaseItem(String customerId, String itemId, String dateOfPurchase) {
-		
-		String logMethod = "PurchaseItem(" + customerId + ", " + itemId + ", " + dateOfPurchase +")";
-		log.info(logMethod + " has been invoked");
 		
 		String itemRegion = ExtractRegion(itemId);
 		
@@ -200,7 +184,6 @@ public class StoreServer{
 					try {
 						Date date = new SimpleDateFormat("dd-MM-yyyy").parse(dateOfPurchase);
 						String status = CompleteTransaction(customerId, itemId, date);
-						log.info(logMethod + " returns " + status);
 						return status;
 					} catch (ParseException e) {
 						// TODO Auto-generated catch block
@@ -210,14 +193,15 @@ public class StoreServer{
 				}
 				 
 				else {
-					log.info(logMethod + " returns Waitlist");
-					return "Waitlist";
+					String s = AddCustomerToWaitList(itemId, customerId);
+					return s;
 				}
+					
+				
 			}
-			else {
-				log.info(logMethod + " returns ProductMissing");
+			else 
 				return "ProductMissing";
-			}
+			
 		}
 		else {
 			String status = "Failed";
@@ -227,7 +211,6 @@ public class StoreServer{
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			log.info(logMethod + " returns" + status);
 			return status;
 		}
 		
@@ -237,9 +220,6 @@ public class StoreServer{
 	public String[] FindItem(String customerId, String itemDescription) {
 		
 		try {
-			
-			String logMethod = "FindItem(" + customerId + ", " + itemDescription +")";
-			log.info(logMethod + " has been invoked");
 			
 			Customer customer = customerList.get(customerId);
 			
@@ -280,15 +260,10 @@ public class StoreServer{
 		    	 }
 				 
 				 LinkedList<String> matchesString = new LinkedList<String>();
-				 String logString = "";
 				 for (int i = 0; i < matches.size(); i++) {
-					 String entry = matches.get(i).getId() + " " + matches.get(i).getDescription() + " " + matches.get(i).getQuantity();
+					 String entry = String.format("%s %.2f %d", matches.get(i).getId(), matches.get(i).getPrice(), matches.get(i).getQuantity());
 					 matchesString.add(entry);
-					 
-					 logString = logString + entry + "\n";
 				 }
-				 
-				 log.info(logMethod + " returns " + logString);
 				 
 				 String[] array = matchesString.toArray(new String[matchesString.size()]);
 				 
@@ -302,9 +277,6 @@ public class StoreServer{
 	}
 	
 	public String AddCustomerToWaitList(String itemId, String customerId) {
-		
-		String logMethod = "AddCustomerToWaitList(" + itemId + ", " + customerId +")";
-		log.info(logMethod + " has been invoked");
 		
 		String itemRegion = ExtractRegion(itemId);
 		
@@ -324,13 +296,11 @@ public class StoreServer{
 					waitList.put(itemId, queue);
 				}
 				
-				log.info(logMethod + " returns Waitlist");
-				return "Waitlist";
+				return String.format("SUCCESS: Putting customer on waitlist");
 			}
-			else {
-				log.info(logMethod + " returns ProductMissing");
+			else 
 				return "ProductMissing";
-			}
+			
 		}
 		else {
 			String status = "Failed";
@@ -342,17 +312,13 @@ public class StoreServer{
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
-			log.info(logMethod + " returns " + status);
-			return status;
+			return "ERROR: Could not connect to the server";
 		}
 	}
 	
 	   
   
 	   public String AddItem(String managerId, String itemId, String itemName, int quantity, double price) {
-		    String logMethod = "AddItem("+ managerId + ", " + itemId + ", " + itemName + ", " + quantity + ", " + price +")";
-			log.info(logMethod + " has been invoked");
 			
 			Manager manager = managerList.get(managerId);
 			
@@ -372,8 +338,6 @@ public class StoreServer{
 					{
 						product = new Product(itemId, itemName, quantity, price);
 						productList.put(itemId, product);
-						
-						log.info(logMethod + " returns Added");
 					}
 					
 					else
@@ -397,8 +361,6 @@ public class StoreServer{
 									// TODO Auto-generated catch block
 									e.printStackTrace();
 								}
-							
-							log.info(logMethod + " returns Updated");
 						}
 					}
 					
@@ -406,7 +368,6 @@ public class StoreServer{
 					
 				}
 				else {
-					log.info(logMethod + " returns WrongItemRegion");
 					return String.format("ERROR: Adding item ID %s to location %s", itemId, this.region);
 				}
 					
@@ -415,13 +376,11 @@ public class StoreServer{
 		}
 	
 		public String RemoveItem(String managerId, String itemId, int quantity) {
-			String logMethod = "RemoveItem(" + managerId + ", " + itemId + ", " + quantity + ")";
-			log.info(logMethod + " has been invoked");
 			
 			Manager manager = managerList.get(managerId);
 			
 			if (manager == null)
-				throw new SecurityException();
+				return String.format("ERROR: Non manager accessing remove item");
 			
 			else
 			{
@@ -434,42 +393,31 @@ public class StoreServer{
 					{
 						if (quantity < 0)
 						{
+							String returnMessage = String.format("SUCCESS: Item %s deleted from the store", product.getDescription());
 							productList.remove(itemId);
 							waitList.remove(itemId);
-							
-							log.info(logMethod + " returns ItemDeleted");
-							return "ItemDeleted";
-						}
-						else if (product.getQuantity() > 0)
-						{
-							int newQuantity = product.getQuantity() - quantity > 0 ? product.getQuantity() - quantity : 0;
-							setProductQuantity(product, newQuantity);
-							
-							log.info(logMethod + " returns ModifiedQuantity");
-						   return "ModifiedQuantity";
+							return returnMessage;
 						}
 						else
 						{
-							log.info(logMethod + " returns ModifiedQuantity");
-							return "AlreadyZero";
+							int newQuantity = product.getQuantity() - quantity > 0 ? product.getQuantity() - quantity : 0;
+							int removed = (product.getQuantity() - quantity < 0 ?product.getQuantity() : quantity);
+							setProductQuantity(product, newQuantity);
+							
+						   return String.format("SUCCESS: Removed %d items %s from the store" + (removed == quantity ? "" : " instead of " + quantity), removed, product.getDescription());
 						}
 							
 					}
-					
-					log.info(logMethod + " returns ProductMissing");
-					return "ProductMissing";
+					else
+						return String.format("ERROR: Removed item ID %s does not exist in store", itemId);
 					
 					
 				}
-				log.info(logMethod + " returns WrongItemRegion");
-				return "WrongItemRegion";
+				return String.format("ERROR: Removed item ID %s does not exist in store", itemId);
 			}
 		}
 	
 		public String[] ListItemAvailability(String managerId){
-			
-			String logMethod = "ListItemAvailability(" + managerId + ")";
-			log.info(logMethod + " has been invoked");
 		
 			Manager manager = managerList.get(managerId);
 			
@@ -482,12 +430,10 @@ public class StoreServer{
 				String logString = "";
 				for (Map.Entry<String, Product> map : productList.entrySet()) {
 					Product product = map.getValue();
-					String entry = "Id: " + product.getId() + " || Description: " + product.getDescription() + " || Quantity: " + product.getQuantity() + " || Price: " + product.getPrice() ;
+					String entry = String.format("%s %s %.2f %d", product.getId(), product.getDescription(), product.getPrice(), product.getQuantity());
 					allItems.add(entry);
 					logString = logString + entry + "\n";
 				}
-				 
-				 log.info(logMethod + " returns " + logString);
 				 
 				 String[] array = allItems.toArray(new String[allItems.size()]);
 				 
@@ -521,8 +467,6 @@ public class StoreServer{
 					   String dateOfPurchase = values[3];
 					   double budget =Double.parseDouble(values[4]);
 					   
-					   String logMethod = "PurchaseItem(" + customerId + ", " + itemId + ", " + dateOfPurchase +")";
-					   log.info(logMethod + " has been invoked");
 					   
 					   Product product = productList.get(itemId);
 					   if (product != null) {
@@ -541,22 +485,22 @@ public class StoreServer{
 									
 								  }
 								  else {
-										replyMessage =  "Waitlist";
+										replyMessage =  AddCustomerToWaitList(itemId, customerId);
 								  }
 								  
 							  } 
 							  else  
-								  replyMessage =  "MissingFunds";
+								  replyMessage =  String.format("ERROR: Customer could not afford item %s", itemId);
 								  
 							
 						  }
 						  else
-							  replyMessage = "BlackListed";
+							  replyMessage = String.format("ERROR: Cannot purchase multiple items from inter-province store");
 						}
 						else {
-							replyMessage = "ProductMissing";
+							replyMessage = String.format("ERROR: Purchased item ID %s does not exist in store", itemId);
 						}
-					   log.info(logMethod + " returns " + replyMessage);
+					   
 					   r = replyMessage.getBytes();
 				   }
 				   
@@ -565,20 +509,17 @@ public class StoreServer{
 					   String customerId = values[1];
 					   String itemId = values[2];
 					  
-					   String logMethod = "ReturnItem(" + customerId + ", " + itemId  +")";
-					   log.info(logMethod + " has been invoked");
 
 					   Product product = productList.get(itemId);
 					   if (product != null) {
 						   product.setQuantity(product.getQuantity() + 1);
 						   blacklistedCustomers.remove(customerId);
 						   UpdateWaitList(itemId);
-						   replyMessage = "Returned";
+						   replyMessage = String.format("SUCCESS: Customer returned item %s", itemId);
 					   }
 					   else
-						   replyMessage = "ProductMissing";
+						   replyMessage = String.format("ERROR: Purchased item ID %s does not exist in store", itemId);
 					   
-					   log.info(logMethod + " returns " + replyMessage);
 					   r = replyMessage.getBytes();
 				   }
 				   
@@ -587,8 +528,6 @@ public class StoreServer{
 						   String customerId = values[1];
 						   String itemId = values[2];
 						  
-						   String logMethod = "ReserveItem(" + customerId + ", " + itemId  +")";
-						   log.info(logMethod + " has been invoked");
 
 						   boolean isReserved = ReserveItem(customerId, itemId);
 						   if (isReserved)
@@ -596,7 +535,6 @@ public class StoreServer{
 						   else
 							   replyMessage = "CannoteReserve";
 						   
-						   log.info(logMethod + " returns " + replyMessage);
 						   r = replyMessage.getBytes();
 				   }
 					   
@@ -605,14 +543,9 @@ public class StoreServer{
 					   
 					   String customerId = values[1];
 					   String itemId = values[2];
-					  
-					   String logMethod = "AddToWaitList(" + customerId + ", " + itemId  +")";
-					   log.info(logMethod + " has been invoked");
-
 					   
 					   replyMessage = AddCustomerToWaitList( itemId, customerId);
 					   
-					   log.info(logMethod + " returns " + replyMessage);
 					   r = replyMessage.getBytes();
 				   }
 				   
@@ -632,8 +565,6 @@ public class StoreServer{
 					   String itemId = values[2];
 					   double price = Double.parseDouble(values[3]);
 					  
-					   String logMethod = "PurchaseFromWaitList(" + customerId + ", " + itemId  + ", " + price + ")";
-					   log.info(logMethod + " has been invoked");
 					   
 					   Customer customer = customerList.get(customerId);
 					   if (customer != null){
@@ -661,9 +592,6 @@ public class StoreServer{
 				   {
 					   String itemDescription = values[1];
 					   
-					   String logMethod = "FindItem(" + itemDescription + ")";
-					   log.info(logMethod + " has been invoked");
-
 					   itemDescription = itemDescription.replace("\"", "");
 					   
 					   LinkedList<Product> matches = SearchItem(itemDescription);
@@ -679,8 +607,6 @@ public class StoreServer{
 	
 						    logString = logString + entry + "\n";
 					    }
-
-					    log.info(logMethod + " returns " + logString);
 
 					    r = out.toByteArray();
 				   }
@@ -711,33 +637,6 @@ public class StoreServer{
 			
 	}
 	
-	private Logger initiateLogger() throws IOException {
-		Files.createDirectories(Paths.get("Logs/Servers"));
-		
-		Logger logger = Logger.getLogger("Logs/Servers/" + region + ".log");
-		FileHandler fileHandler;
-		
-		try
-		{
-			fileHandler = new FileHandler("Logs/Servers/" + region + ".log");
-			
-			logger.setUseParentHandlers(false);
-			logger.addHandler(fileHandler);
-			
-			SimpleFormatter formatter = new SimpleFormatter();
-			fileHandler.setFormatter(formatter);
-		}
-		
-		catch (IOException e)
-		{
-			System.err.println("IO Exception " + e);
-			e.printStackTrace();
-		}
-		
-		System.out.println("Server can successfully log.");
-		
-		return logger;
-	}
 	
 	private void InitializeStore(String region) {
 		Manager manager1 = new Manager(region+ "M" + 1000, region);
@@ -954,8 +853,6 @@ public class StoreServer{
 	}
 	
 	private String verifyReturn(String customerId, String itemId, String dateOfReturn) {
-		String logMethod = "ReturnItem(" + customerId + ", " + itemId + ", " + dateOfReturn +")";
-		log.info(logMethod + " has been invoked");
 		
 		Customer customer = customerList.get(customerId);
 		
@@ -979,23 +876,15 @@ public class StoreServer{
 		        // convert calendar to date
 		        Date minDate = c.getTime();
 		        
-		        if (minDate.before(now) || !minDate.after(now)) {
-		        	
-		        	log.info(logMethod + " returns CanReturn");
+		        if (minDate.before(now) || !minDate.after(now)) 
 		        	return "CanReturn";
-				        	 
-				        }
 		        else
-		        {
-		        	log.info(logMethod + " returns Denied");
-		        	return "Denied";
-		        }
+		        	return String.format("ERROR: Returned item %s has passed return policy deadline", itemId);
 				        	
 			}
 		}
-				
-		log.info(logMethod + " returns NotFound");
-		return "NotFound";
+		
+		return String.format("ERROR: Returned item ID %s does not exist with customer", itemId);
 	}
 	
 	private synchronized void setProductQuantity(Product p, int quantity) {
