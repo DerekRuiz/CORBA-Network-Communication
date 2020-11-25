@@ -231,7 +231,7 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
         try (DatagramSocket sendSocket = new DatagramSocket()) {
             sendSocket.setSoTimeout(resendDelay);
             while (not_received) {
-            	this.stopwatch = System.nanoTime();
+            	this.stopwatch = System.currentTimeMillis();
                 sendSocket.send(request);
                 try {
                     byte[] buffer = new byte[1000];
@@ -282,8 +282,8 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
     			byte[] buffer = new byte[1000];
                 DatagramPacket request = new DatagramPacket(buffer, buffer.length);
                 socket.receive(request);
-                
-                long timeToReply = System.currentTimeMillis() - stopwatch; 
+                long timeNow = System.currentTimeMillis();
+                long timeToReply = timeNow  - stopwatch; 
                 		
                 String msg = new String(request.getData());
                 Tuple<InetAddress, Integer, String> RMAddress = new Tuple<InetAddress, Integer, String>(request.getAddress(), request.getPort(), msg.trim());
@@ -432,9 +432,6 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 	           
 	           this.RM3Address = InetAddress.getByName(token[8]);
 	           this.RM3Port = Integer.parseInt(token[9]);
-	           
-	           
-	       
 	      }
 	      fScn.close();
 	}
