@@ -14,4 +14,36 @@
 	<natures>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>src/store/Customer.java</name>
+			<type>1</type>
+			<location>D:/SOEN423/SOEN423Project/ReplicaManager Part/src/Customer.java</location>
+		</link>
+		<link>
+			<name>src/store/Item.java</name>
+			<type>1</type>
+			<location>D:/SOEN423/SOEN423Project/ReplicaManager Part/src/Item.java</location>
+		</link>
+		<link>
+			<name>src/store/Manager.java</name>
+			<type>1</type>
+			<location>D:/SOEN423/SOEN423Project/ReplicaManager Part/src/Manager.java</location>
+		</link>
+		<link>
+			<name>src/store/Server.java</name>
+			<type>1</type>
+			<location>D:/SOEN423/SOEN423Project/ReplicaManager Part/src/Server.java</location>
+		</link>
+		<link>
+			<name>src/store/StoreServer.java</name>
+			<type>1</type>
+			<location>D:/SOEN423/SOEN423Project/ReplicaManager Part/src/StoreServer.java</location>
+		</link>
+		<link>
+			<name>src/store/StoreServerInterface.java</name>
+			<type>1</type>
+			<location>D:/SOEN423/SOEN423Project/ReplicaManager Part/src/StoreServerInterface.java</location>
+		</link>
+	</linkedResources>
 </projectDescription>

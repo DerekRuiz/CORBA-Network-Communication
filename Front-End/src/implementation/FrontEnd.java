@@ -285,8 +285,16 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
                 long timeNow = System.currentTimeMillis();
                 long timeToReply = timeNow  - stopwatch; 
                 		
-                String msg = new String(request.getData());
-                Tuple<InetAddress, Integer, String> RMAddress = new Tuple<InetAddress, Integer, String>(request.getAddress(), request.getPort(), msg.trim());
+                String message = new String(request.getData());
+                
+                String[] splitMessage = message.split(";");
+
+                String sender = splitMessage[0];
+                String[] args = sender.split(",");
+                InetAddress senderAddress = InetAddress.getByName(args[0]);
+                int senderPort = Integer.parseInt(args[1]);
+                
+                Tuple<InetAddress, Integer, String> RMAddress = new Tuple<InetAddress, Integer, String>(senderAddress, senderPort, splitMessage[1]);
                 
                 if (!repliedRM.contains(RMAddress)) {
                 	repliedRM.add(RMAddress);
@@ -305,11 +313,10 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
     		
     		return answer;
     		
-        } catch (SocketException ex) {
+        
+        } catch (IOException ex) {
         	answer = getMajority(repliedRM);
     		return answer;
-        } catch (IOException ex) {
-        	throw ex;
         }
     }
     
@@ -356,10 +363,10 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
     private void notifyFail(InetAddress address, int port) {
     	
     	for (Tuple<InetAddress, Integer, String> r: RMAddresses) {
-    		String msgArguments = "ERROR" + "," + address + ", " + port;
-    		String msg = buildMessage(address, port, msgArguments);
+    		String msgArguments = "ERROR" + "," + address.getHostAddress() + ", " + port;
+    		String msg = buildMessage(this.localAddress, this.localPort, msgArguments);
     		new Thread(() -> {
-    			sendAnswerMessage(msgArguments, r.getLeft(), r.getMiddle());
+    			sendAnswerMessage(msg, r.getLeft(), r.getMiddle());
             }).start();
     	}
     }
@@ -367,17 +374,17 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
     private void notifyCrash(InetAddress address, int port) {
     	
     	for (Tuple<InetAddress, Integer, String> r: RMAddresses) {
-    		String msgArguments = "CRASH" + "," + address + ", " + port;
+    		String msgArguments = "CRASH" + "," + address.getHostAddress() + ", " + port;
     		String msg = buildMessage(address, port, msgArguments);
     		new Thread(() -> {
-    			sendAnswerMessage(msgArguments, r.getLeft(), r.getMiddle());
+    			sendAnswerMessage(msg, r.getLeft(), r.getMiddle());
             }).start();
     	}
     }
     
     
     private String buildMessage(InetAddress address, int port, String arguments) {
-		return address.toString() + "," + Integer.toString(port) + ";" + arguments;
+		return address.getHostAddress() + "," + Integer.toString(port) + ";" + arguments;
 	}
 	
 	
