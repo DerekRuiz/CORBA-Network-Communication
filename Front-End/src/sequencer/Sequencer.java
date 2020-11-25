@@ -124,7 +124,7 @@ public class Sequencer {
                     validitySocket.receive(reply1);
                     validitySocket.receive(reply2);
                     validitySocket.receive(reply3);
-
+                    
                     if (new String(reply1.getData()).trim().equalsIgnoreCase("RECEIVED") && new String(reply2.getData()).trim().equalsIgnoreCase("RECEIVED") && new String(reply3.getData()).trim().equalsIgnoreCase("RECEIVED")) {
                         not_received = false;
                     }
