@@ -421,6 +421,9 @@ public class StoreServer {
         logger.info(result);
         return result;
     }
+    public void close(){
+        
+    }
 
 
 
