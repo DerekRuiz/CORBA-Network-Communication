@@ -297,6 +297,8 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
                 
                 Tuple<InetAddress, Integer, String> RMAddress = new Tuple<InetAddress, Integer, String>(senderAddress, senderPort, splitMessage[1]);
                 
+                System.out.println(senderAddress + "||" + senderPort + "||" + splitMessage[1]);
+                
                 if (!repliedRM.contains(RMAddress)) {
                 	repliedRM.add(RMAddress);
                     sendReceivedMessage(request.getAddress(), request.getPort());
