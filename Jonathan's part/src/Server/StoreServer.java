@@ -109,19 +109,22 @@ public class StoreServer {
         return result;
     }
 
-    public String listItemAvailability(String managerID) {
+    public String[] listItemAvailability(String managerID) {
 
         if(managerID.charAt(2) != 'M'){
             logger.info("ERROR: Non manager accessing list available items");
             return "ERROR: Non manager accessing list available items";
         }
-
+        String[] temp;
+        int i=0;
         StringBuilder result = new StringBuilder();
         for (String key : itemList.keySet()) {
+            temp[i] =  itemList.get(key).toString();
+            i++;
             result.append(itemList.get(key).toString()).append("\n");
         }
         this.logger.info("listItemAvailability() called. Parameters: " + managerID);
-        return result.toString();
+        return temp;
     }
 
     public synchronized String purchaseItem(String customerID, String itemID, String dateOfPurchase) {
@@ -219,7 +222,7 @@ public class StoreServer {
         return result;
     }
 
-    public synchronized String findItem(String customerID, String itemName) {
+    public synchronized String[] findItem(String customerID, String itemName) {
         if(customerID.charAt(2) != 'U'){
             logger.info("ERROR: Non customer accessing find item");
             return "ERROR: Non customer accessing find item";
@@ -227,8 +230,11 @@ public class StoreServer {
         StringBuilder result = new StringBuilder("findItem() called. Parameters: " + customerID + " " + itemName + "\n");
 
         boolean contained = false;
+        String[] temp;
+        int i=0;
         for (String key : itemList.keySet()) {
             if (itemList.get(key).name.equals(itemName)) {
+                temp[i] = itemList.get(key).toString();
                 result.append(itemList.get(key).toString());
                 contained = true;
             }
@@ -264,21 +270,25 @@ public class StoreServer {
             }
         }
         this.logger.info(result.toString());
-        return result.toString();
+        return temp;
     }
 
-    public synchronized String findForeignItem(String itemName) {
+    public synchronized String[] findForeignItem(String itemName) {
         String result = "";
+        String[] temp;
+        int i =0;
         boolean contained = false;
         for (String key : itemList.keySet()) {
             if (itemList.get(key).name.equals(itemName)) {
+                temp[i] = itemList.get(key).toString();
+                i++;
                 result += itemList.get(key).toString();
                 contained = true;
                 break;
             }
         }
 
-        return result;
+        return temp;
     }
 
 
