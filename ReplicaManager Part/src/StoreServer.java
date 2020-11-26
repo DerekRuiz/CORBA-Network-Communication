@@ -1,4 +1,4 @@
-package store;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -56,7 +56,7 @@ public class StoreServer implements StoreServerInterface {
             waitForRequest(UDPPort);
         }).start();
     }
-    
+
     public StoreServer(String location, int UDPPort) {
         this.location = location.toUpperCase();
         this.aSocket = null;
@@ -85,8 +85,6 @@ public class StoreServer implements StoreServerInterface {
          * "4321", "bed", 2, 1230.99));
          */
     }
-    
-    
 
     @Override
     public synchronized String addItem(String managerID, String itemID, String itemName, int quantity, double price) {
@@ -221,7 +219,15 @@ public class StoreServer implements StoreServerInterface {
                     return String.format("SUCCESS: Purchased item %s from sever %s", itemID, this.location);
                 } else {
                     this.addToLog(customerID, String.format("ERROR: Not enough of item %s, contacting customer", itemID));
-                    return String.format("WAITLIST");
+                    customerID = customerID.split(":")[0];
+                    String result;
+                    if (customerID.substring(0, 2).equalsIgnoreCase(itemID.substring(0, 2))) {
+                        result = waitLocalItem(customerID, itemID, dateOfPurchase);
+                    } else {
+                        result = waitForeignItem(customerID, itemID, dateOfPurchase);
+                    }
+                    return result;
+                    //return String.format("WAITLIST");
                 }
             } else {
                 this.addToLog(customerID, String.format("ERROR: Customer could not afford item %s", itemID));
@@ -686,9 +692,8 @@ public class StoreServer implements StoreServerInterface {
         }
     }
 
-    public void close(){
+    public void close() {
         aSocket.close();
     }
-    
 
 }

@@ -26,6 +26,7 @@ public class test {
     DatagramSocket aSocket;
 
     public static void main(String[] args) throws UnknownHostException, SocketException, IOException, InterruptedException {
+        System.out.println(InetAddress.getLocalHost());
         ReplicaManager rm1 = new ReplicaManager(InetAddress.getLocalHost(), 6789, false, true);
         DatagramSocket aSocket = new DatagramSocket(7899, InetAddress.getLocalHost());
 
@@ -49,7 +50,7 @@ public class test {
                 t.sendReceivedMessage(reply.getAddress(), reply.getPort());
             }
         }).start();
-t.sendAnswerMessage(String.format(aSocket.getLocalAddress().getHostAddress() + "," + aSocket.getLocalPort() + ",0;ADD,QCM1234,QC1234,ke,1,23"), rm1.replicaSocket.getLocalAddress(), rm1.replicaSocket.getLocalPort());
+        t.sendAnswerMessage(String.format(aSocket.getLocalAddress().getHostAddress() + "," + aSocket.getLocalPort() + ",0;ADD,QCM1234,QC1234,ke,1,23"), rm1.replicaSocket.getLocalAddress(), rm1.replicaSocket.getLocalPort());
         Thread.sleep(1000);
         t.sendAnswerMessage(String.format(aSocket.getLocalAddress().getHostAddress() + "," + aSocket.getLocalPort() + ",0;CRASH,%s,%s", rm1.replicaSocket.getLocalAddress().getHostAddress(), rm1.replicaSocket.getLocalPort()), rm1.replicaSocket.getLocalAddress(), rm1.replicaSocket.getLocalPort());
         Thread.sleep(1000);
