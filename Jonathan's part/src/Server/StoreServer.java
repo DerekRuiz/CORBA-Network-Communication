@@ -180,10 +180,10 @@ public class StoreServer {
 
                 if (temp.charAt(0) == 'S') {
                     customer.purchaseItem(Integer.parseInt(temp.substring(1)));
-                    result += "Purchase successful in foreign " + item_branchID + " Store. Your budget is now " + customer.budget;
+                    result = "SUCCESS: Purchased item " + itemID + " from sever " + item_branchID;
                 }
                 else{
-                    result += "Purchase was unsuccessful in foreign " + item_branchID + " Store. Reason:\n " + temp;
+                    result = temp;
                 }
 
             } catch (SocketException e) {
@@ -205,9 +205,9 @@ public class StoreServer {
         }
 
         if (!itemList.containsKey(itemID))
-            result = "Item is not present in this store.";
+            result = "ERROR: Purchased item ID " + itemID + " does not exist in store";
         else if (itemList.get(itemID).quantity == 0)
-            result = "Item is unavailable at the moment";
+            result = "ERROR: Not enough of item " + itemID+ ", contacting customer";
         else if(customerOnePurchaseLimit)
             result = "ERROR: Cannot purchase multiple items from inter-province store";
         else {
@@ -233,8 +233,6 @@ public class StoreServer {
                 contained = true;
             }
         }
-        if (!contained)
-            result.append("Item not present in local ").append(branchID).append(" Store.");
 
         String[] branch_ids = {"QC", "ON", "BC"};
         int[] UDPPorts = {2000, 3000, 4000};
@@ -279,8 +277,7 @@ public class StoreServer {
                 break;
             }
         }
-        if (!contained)
-            result += "Item not present in foreign  " + branchID + " Store.";
+
         return result;
     }
 
@@ -328,7 +325,7 @@ public class StoreServer {
 
                 }
             }
-            result += "ERROR: Date of purchase was not found from customer";
+            result += "ERROR: Returned item ID " + itemID +" does not exist with customer";
             this.logger.info(result);
             return result;
 
@@ -351,10 +348,10 @@ public class StoreServer {
 
                 if (temp.charAt(0) == 'S') {
                     customer.returnItem(Integer.parseInt(temp.substring(1)));
-                    result += "Return successful in foreign " + item_branchID + " Store. Your budget is now " + customer.budget;
+                    result = "SUCCESS: Customer returned item " + itemID;
                 }
                 else{
-                    result += "Return was unsuccessful in foreign " + item_branchID + " Store. Reason:\n " + temp;
+                    result = temp;
                 }
 
             } catch (SocketException e) {
@@ -386,13 +383,13 @@ public class StoreServer {
                     return result;
                 }
                 else{
-                    result += "Purchase was made more than 30 days ago. Return unsuccesssful.";
+                    result = "ERROR: Returned item " + itemID + " has passed return policy deadline";
                     return result;
                 }
 
             }
         }
-        result += "item has not been purchased by this user.";
+        result = "ERROR: Returned item ID " + itemID +" does not exist with customer";
         this.logger.info(result);
         return result;
 
@@ -404,25 +401,23 @@ public class StoreServer {
             logger.info("ERROR: Non customer accessing return item");
             return "ERROR: Non customer accessing return item";
         }
-        String result = "exchangeItem() called. Parameters: " + customerID + " " + newItemID + " " + oldItemId + "\nStatus: ";
+        String result;
         LocalDate date = LocalDate.now();
-        result += this.returnItem(customerID, oldItemId, date.toString()) + "\n";
-        if (!result.contains("Return successful")) {
-            result += ("Return was not successful so exchange cannot be completed");
+        result = this.returnItem(customerID, oldItemId, date.toString()) + "\n";
+        if (!result.contains("SUCCESS")) {
             return result;
         }
-        result += this.purchaseItem(customerID, newItemID, date.toString());
-        if (!result.contains("Purchase successful")) {
-            result += ("Purchase was not successful so return will be cancelled and exchange cannot be completed");
-            this.purchaseItem(customerID, oldItemId, date.toString());
+        result = this.purchaseItem(customerID, newItemID, date.toString());
+        if (!result.contains("SUCCESS")) {
+            result = this.purchaseItem(customerID, oldItemId, date.toString());
             return result;
         }
-        result+= "\nExchange operation was successful.";
+        result = "SUCCESS: Customer " + customerID + " exchanged item " + oldItemId + " with item " + newItemID;
         logger.info(result);
         return result;
     }
     public void close(){
-        
+
     }
 
 

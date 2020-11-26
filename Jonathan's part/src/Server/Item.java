@@ -14,11 +14,6 @@ public class Item {
     }
 
     public String toString() {
-        return "{" +
-                "itemID='" + itemID + '\'' +
-                ", name='" + name + '\'' +
-                ", quantity=" + quantity +
-                ", price=" + price +
-                '}';
+        return itemID +", " + name + ", " + quantity + ", " + price;
     }
 }
