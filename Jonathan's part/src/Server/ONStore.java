@@ -16,7 +16,7 @@ public class ONStore {
         ONitemList.put(b.itemID, b);
 
         int ONPort = 3000;
-        Store ONStore = new Store("ON",ONitemList);
+        Store ONStore = new Store("ON",ONPort);
 
         DatagramSocket aSocket = null;
         try {

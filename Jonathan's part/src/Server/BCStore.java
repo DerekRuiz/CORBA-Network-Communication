@@ -16,7 +16,7 @@ public class BCStore {
         BCitemList.put(b.itemID, b);
 
         int BCPort = 4000;
-        Store BCStore = new Store("BC",BCitemList);
+        Store BCStore = new Store("BC",BCPort);
 
         DatagramSocket aSocket = null;
         try {

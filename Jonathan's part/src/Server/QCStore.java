@@ -17,7 +17,7 @@ public class QCStore {
         QCitemList.put(b.itemID, b);
 
         int QCPort = 2000;
-        Store QCStore = new Store("QC",QCitemList);
+        Store QCStore = new Store("QC",QCPort);
 
         DatagramSocket aSocket = null;
         try {
