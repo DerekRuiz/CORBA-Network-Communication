@@ -329,8 +329,8 @@ public class StoreServer implements StoreServerInterface {
 
         // Check if new item exists
         if (newItem == null) {
-            this.addToLog(customerID, String.format("ERROR: New item %s does not exists", newItemID));
-            return String.format("ERROR: New item %s does not exists", newItemID);
+            this.addToLog(customerID, String.format("ERROR: Purchased item ID %s does not exist in store", newItemID));
+            return String.format("ERROR: Purchased item ID %s does not exist in store", newItemID);
         }
 
         // Check if new item is available
@@ -341,8 +341,8 @@ public class StoreServer implements StoreServerInterface {
 
         // Check if customer has budget to exchange items
         if (user.budget + oldItem.price - newItem.price < 0) {
-            this.addToLog(customerID, String.format("ERROR: Customer %s does not have enough budget to exhange item %s with item %s", customerID, oldItemID, newItemID));
-            return String.format("ERROR: Customer %s does not have enough budget to exhange item %s with item %s", customerID, oldItemID, newItemID);
+            this.addToLog(customerID, String.format("ERROR: Customer could not afford item %s", newItemID));
+            return String.format("ERROR: Customer could not afford item %s", newItemID);
         }
 
         // Performs return action, unless an error occurs then returns the error
@@ -399,7 +399,7 @@ public class StoreServer implements StoreServerInterface {
         for (Map.Entry<String, Item> entry : items.entrySet()) {
             String itemID = entry.getKey();
             Item item = entry.getValue();
-
+            
             if (item.itemName.equalsIgnoreCase(itemName)) {
                 listItems.add(String.format("%s %.2f %d", itemID, item.price, item.quantity));
             }
