@@ -1,6 +1,8 @@
-package Server;
+package store;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
@@ -16,14 +18,15 @@ public class ONStore {
         ONitemList.put(b.itemID, b);
 
         int ONPort = 3000;
-        Store ONStore = new Store("ON",ONPort);
+        StoreServer ONStore = new StoreServer("ON",ONPort);
 
         DatagramSocket aSocket = null;
         try {
             aSocket = new DatagramSocket(ONPort);
             byte[] buffer;
             System.out.println("Server Started............");
-
+           
+            
             while (true) {
 
                 buffer = new byte[1000];
@@ -33,6 +36,8 @@ public class ONStore {
                 String request_string = new String(request.getData()).trim();
                 System.out.println("Request received from client: " + request_string);
                 String result="";
+                String[] resultArray = null;
+                DatagramPacket reply = null;
 
                 if(request_string.startsWith("M1")) {
                     String[] inputs = request_string.substring(2).split(",");
@@ -44,7 +49,7 @@ public class ONStore {
                 }
                 else if(request_string.startsWith("M3")){
                     String[] inputs = request_string.substring(2).split(",");
-                    result = ONStore.listItemAvailability(inputs[0]);
+                    resultArray = ONStore.listItemAvailability(inputs[0]);
                 }
                 else if(request_string.startsWith("C1")) {
                     String[] inputs = request_string.substring(2).split(",");
@@ -52,7 +57,7 @@ public class ONStore {
                 }
                 else if(request_string.startsWith("C2")){
                     String[] inputs = request_string.substring(2).split(",");
-                    result = ONStore.findItem(inputs[0],inputs[1]);
+                    resultArray = ONStore.findItem(inputs[0],inputs[1]);
                 }
                 else if(request_string.startsWith("C3")){
                     String[] inputs = request_string.substring(2).split(",");
@@ -60,7 +65,7 @@ public class ONStore {
                 }
                 else if(request_string.startsWith("C4")){
                     String[] inputs = request_string.substring(2).split(",");
-                    result = ONStore.listItemAvailability(inputs[0]);
+                    resultArray = ONStore.listItemAvailability(inputs[0]);
                 }
                 else if(request_string.startsWith("PFI")){
                     String[] inputs = request_string.substring(3).split(",");
@@ -68,14 +73,24 @@ public class ONStore {
                 }
                 else if(request_string.startsWith("FFI")){
                     String input = request_string.substring(3);
-                    result = ONStore.findForeignItem(input);
+                    resultArray = ONStore.findForeignItem(input);
                 }
                 else if(request_string.startsWith("RFI")){
                     String[] inputs = request_string.substring(3).split(",");
                     result = ONStore.returnForeignItem(inputs[0],inputs[1],inputs[2]);
                 }
+                
+                if (resultArray != null) {
+                	ByteArrayOutputStream out = new ByteArrayOutputStream();
+					ObjectOutputStream outputStream = new ObjectOutputStream(out);
+					outputStream.writeObject(resultArray);
+					outputStream.close();
+					out.toByteArray();
+                	
+                	reply = new DatagramPacket(out.toByteArray(), result.length(), request.getAddress(), request.getPort());
+                }
 
-                DatagramPacket reply = new DatagramPacket(result.getBytes(), result.length(), request.getAddress(), request.getPort());
+                reply = new DatagramPacket(result.getBytes(), result.length(), request.getAddress(), request.getPort());
                 aSocket.send(reply);
             }
         } catch (SocketException e) {

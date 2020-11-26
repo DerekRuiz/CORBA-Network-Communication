@@ -1,6 +1,8 @@
-package Server;
+package store;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -8,7 +10,9 @@ import java.net.SocketException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -17,7 +21,7 @@ public class StoreServer {
 
     public String branchID;
     int port;
-    public HashMap<String, Item> itemList;
+    public HashMap<String, Item> itemList = new HashMap<>();
     public Logger logger;
     public HashMap<String, Customer> customerList = new HashMap<>();
     public ArrayList<String[]> purchaseLogs = new ArrayList<>();
@@ -45,7 +49,7 @@ public class StoreServer {
     }
     public Logger initiateLogger() {
 
-        Logger logger = Logger.getLogger(Store.class.getName());
+        Logger logger = Logger.getLogger(StoreServer.class.getName());
         FileHandler fh;
         try {
             fh = new FileHandler("/Users/jonathanfrey/Documents/java_store_imp/src/Logs/" + this.branchID + " Server.Store Log.txt");
@@ -59,7 +63,7 @@ public class StoreServer {
         return logger;
     }
 
-    public String addItem(String managerID, String itemID, String name, int quantity, int price) {
+    public String addItem(String managerID, String itemID, String name, int quantity, double price) {
 
         if(managerID.charAt(2) != 'M'){
             logger.info("ERROR: Non manager accessing add item");
@@ -111,11 +115,7 @@ public class StoreServer {
 
     public String[] listItemAvailability(String managerID) {
 
-        if(managerID.charAt(2) != 'M'){
-            logger.info("ERROR: Non manager accessing list available items");
-            return "ERROR: Non manager accessing list available items";
-        }
-        String[] temp;
+        String[] temp = null;
         int i=0;
         StringBuilder result = new StringBuilder();
         for (String key : itemList.keySet()) {
@@ -223,14 +223,12 @@ public class StoreServer {
     }
 
     public synchronized String[] findItem(String customerID, String itemName) {
-        if(customerID.charAt(2) != 'U'){
-            logger.info("ERROR: Non customer accessing find item");
-            return "ERROR: Non customer accessing find item";
-        }
+    	
         StringBuilder result = new StringBuilder("findItem() called. Parameters: " + customerID + " " + itemName + "\n");
 
         boolean contained = false;
-        String[] temp;
+        ArrayList results = new ArrayList();
+        String[] temp = null;
         int i=0;
         for (String key : itemList.keySet()) {
             if (itemList.get(key).name.equals(itemName)) {
@@ -243,7 +241,7 @@ public class StoreServer {
         String[] branch_ids = {"QC", "ON", "BC"};
         int[] UDPPorts = {2000, 3000, 4000};
 
-        for (int i = 0; i < branch_ids.length; i++) {
+        for (int j = 0; i < branch_ids.length; i++) {
             if (!branch_ids[i].equals(this.branchID)) {
 
                 try (DatagramSocket aSocket = new DatagramSocket()) {
@@ -258,9 +256,17 @@ public class StoreServer {
                     byte[] buffer = new byte[1000];
                     DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
                     aSocket.receive(reply);
+                    
+                	ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(reply.getData()));
+					String[] foundMatches = null;
+					try {
+						foundMatches = (String[]) inputStream.readObject();
+					} catch (ClassNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 
-                    String temp = new String(reply.getData()).trim();
-                    result.append("\n").append(temp);
+                    results.addAll(new ArrayList<String>(Arrays.asList(foundMatches)));
                 } catch (SocketException e) {
                     System.out.println("Socket: " + e.getMessage());
                 } catch (IOException e) {
@@ -275,7 +281,7 @@ public class StoreServer {
 
     public synchronized String[] findForeignItem(String itemName) {
         String result = "";
-        String[] temp;
+        String[] temp = null;
         int i =0;
         boolean contained = false;
         for (String key : itemList.keySet()) {
@@ -405,7 +411,7 @@ public class StoreServer {
 
     }
 
-    public String exchangeItem(String customerID, String newItemID, String oldItemId) {
+    public String exchangeItem(String customerID, String newItemID, String oldItemId, String dateOfReturn) {
 
         if(customerID.charAt(2) != 'U'){
             logger.info("ERROR: Non customer accessing return item");

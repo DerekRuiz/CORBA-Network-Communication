@@ -1,6 +1,8 @@
-package Server;
+package store;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
@@ -17,7 +19,7 @@ public class QCStore {
         QCitemList.put(b.itemID, b);
 
         int QCPort = 2000;
-        Store QCStore = new Store("QC",QCPort);
+        StoreServer QCStore = new StoreServer("QC",QCPort);
 
         DatagramSocket aSocket = null;
         try {
@@ -34,6 +36,8 @@ public class QCStore {
                 String request_string = new String(request.getData()).trim();
                 System.out.println("Request received from client: " + request_string);
                 String result="";
+                String[] resultArray = null;
+                DatagramPacket reply = null;
 
                 if(request_string.startsWith("M1")) {
                     String[] inputs = request_string.substring(2).split(",");
@@ -45,7 +49,7 @@ public class QCStore {
                 }
                 else if(request_string.startsWith("M3")){
                     String[] inputs = request_string.substring(2).split(",");
-                    result = QCStore.listItemAvailability(inputs[0]);
+                    resultArray = QCStore.listItemAvailability(inputs[0]);
                 }
                 else if(request_string.startsWith("C1")) {
                     String[] inputs = request_string.substring(2).split(",");
@@ -53,7 +57,7 @@ public class QCStore {
                 }
                 else if(request_string.startsWith("C2")){
                     String[] inputs = request_string.substring(2).split(",");
-                    result = QCStore.findItem(inputs[0],inputs[1]);
+                    resultArray = QCStore.findItem(inputs[0],inputs[1]);
                 }
                 else if(request_string.startsWith("C3")){
                     String[] inputs = request_string.substring(2).split(",");
@@ -61,7 +65,7 @@ public class QCStore {
                 }
                 else if(request_string.startsWith("C4")){
                     String[] inputs = request_string.substring(2).split(",");
-                    result = QCStore.exchangeItem(inputs[0],inputs[1],inputs[2]);
+                    result = QCStore.exchangeItem(inputs[0],inputs[1],inputs[2], null);
                 }
                 else if(request_string.startsWith("PFI")){
                     String[] inputs = request_string.substring(3).split(",");
@@ -69,15 +73,23 @@ public class QCStore {
                 }
                 else if(request_string.startsWith("FFI")){
                     String input = request_string.substring(3);
-                    result = QCStore.findForeignItem(input);
+                    resultArray = QCStore.findForeignItem(input);
                 }
                 else if(request_string.startsWith("RFI")){
                     String[] inputs = request_string.substring(3).split(",");
                     result = QCStore.returnForeignItem(inputs[0],inputs[1],inputs[2]);
                 }
 
-
-                DatagramPacket reply = new DatagramPacket(result.getBytes(), result.length(), request.getAddress(), request.getPort());
+                if (resultArray != null) {
+                	ByteArrayOutputStream out = new ByteArrayOutputStream();
+					ObjectOutputStream outputStream = new ObjectOutputStream(out);
+					outputStream.writeObject(resultArray);
+					outputStream.close();
+					out.toByteArray();
+                	
+                	reply = new DatagramPacket(out.toByteArray(), result.length(), request.getAddress(), request.getPort());
+                }
+                	
                 aSocket.send(reply);
             }
         } catch (SocketException e) {

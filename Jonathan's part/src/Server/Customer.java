@@ -1,4 +1,4 @@
-package Server;
+package store;
 
 import java.util.HashMap;
 
@@ -12,9 +12,9 @@ public class Customer {
         this.branchID = clientID.substring(0,2);
         this.budget = 1000;
     }
-    public void purchaseItem(int price){
+    public void purchaseItem(double price){
         budget -= price;
     }
-    public void returnItem(int price){ budget += price; }
+    public void returnItem(double price){ budget += price; }
 
 }
