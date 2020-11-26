@@ -233,6 +233,7 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
             while (not_received) {
             	this.stopwatch = System.currentTimeMillis();
                 sendSocket.send(request);
+                System.out.println(message);
                 try {
                     byte[] buffer = new byte[1000];
                     DatagramPacket reply = new DatagramPacket(buffer, buffer.length);

@@ -1,1 +1,1 @@
-localhost,5100,localhost,5123,localhost,4123,localhost,4124,localhost,4125
+localhost,5100,localhost,5123,localhost,6000,localhost,7000,localhost,8000

@@ -12,34 +12,20 @@ public class RMDriver {
 
 	public static void main(String[] args) throws UnknownHostException, FileNotFoundException {
 		
-		 Scanner fScn = new Scanner(new File("addresses.txt"));
-	     String data;
-	    
-
-	       data = fScn.nextLine();
-	
-	       String[] token = data.split(",");
-	
-	       InetAddress RM1Address = InetAddress.getByName(token[4]);
-	       int RM1Port = Integer.parseInt(token[5]);
-	       
-	       InetAddress RM2Address = InetAddress.getByName(token[6]);
-	       int RM2Port = Integer.parseInt(token[7]);
-	       
-	       InetAddress RM3Address = InetAddress.getByName(token[8]);
-	       int RM3Port = Integer.parseInt(token[9]);
-	      
-	      fScn.close();
-		
-		ReplicaManager rm1 = new ReplicaManager(RM1Address, RM1Port, false, true);
-		ReplicaManager rm2 = new ReplicaManager(RM2Address, RM2Port, false, false);
-		ReplicaManager rm3 = new ReplicaManager(RM3Address, RM3Port, false, false);
-
+		if (args.length == 4) {
+			System.out.println(args[0]);
+			System.out.println(args[1]);
+			System.out.println(args[2]);
+			System.out.println(args[3]);
+			InetAddress RMAddress = InetAddress.getByName(args[0]);
+			int port = Integer.parseInt(args[1]);
+			boolean failMode = Boolean.parseBoolean(args[2]);
+			boolean crashMode = Boolean.parseBoolean(args[3]);
+		      
+			ReplicaManager rm = new ReplicaManager(RMAddress, port, failMode, crashMode);
+			System.out.println("Created RM");
+		}
+		else
+			System.out.println("Missing arguments");
 	}
-	
-	
-	private void ReadAddresses() throws UnknownHostException, FileNotFoundException {
-		
-	}
-	
 }

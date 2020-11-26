@@ -93,9 +93,9 @@ public class Sequencer {
             DatagramPacket FE_request = new DatagramPacket(buffer, buffer.length);
             sequencerSocket.receive(FE_request);
             sendReceivedMessage(FE_request.getAddress(), FE_request.getPort());
-
+           
             String request = new String(FE_request.getData());
-
+            System.out.println(request);
             String[] splitMessage = request.split(";");
             String header = splitMessage[0] +","+ sequence_number ;
             sequence_number++;
@@ -108,6 +108,10 @@ public class Sequencer {
                 DatagramPacket request1 = new DatagramPacket(response.getBytes(), response.length(), RM1Address, 4123);
                 DatagramPacket request2 = new DatagramPacket(response.getBytes(), response.length(), RM2Address, 4124);
                 DatagramPacket request3 = new DatagramPacket(response.getBytes(), response.length(), RM3Address, 4125);
+                
+                System.out.println(RM1Address);
+                System.out.println(RM2Address);
+                System.out.println(RM3Address);
                 validitySocket.send(request1);
                 validitySocket.send(request2);
                 validitySocket.send(request3);
