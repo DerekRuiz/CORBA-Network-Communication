@@ -105,13 +105,14 @@ public class Sequencer {
 
             while (not_received) {
 
-                DatagramPacket request1 = new DatagramPacket(response.getBytes(), response.length(), RM1Address, 4123);
-                DatagramPacket request2 = new DatagramPacket(response.getBytes(), response.length(), RM2Address, 4124);
-                DatagramPacket request3 = new DatagramPacket(response.getBytes(), response.length(), RM3Address, 4125);
+                DatagramPacket request1 = new DatagramPacket(response.getBytes(), response.length(), RM1Address, RM1Port);
+                DatagramPacket request2 = new DatagramPacket(response.getBytes(), response.length(), RM2Address, RM2Port);
+                DatagramPacket request3 = new DatagramPacket(response.getBytes(), response.length(), RM3Address, RM3Port);
                 
                 System.out.println(RM1Address);
                 System.out.println(RM2Address);
                 System.out.println(RM3Address);
+                
                 validitySocket.send(request1);
                 validitySocket.send(request2);
                 validitySocket.send(request3);
@@ -128,6 +129,8 @@ public class Sequencer {
                     validitySocket.receive(reply1);
                     validitySocket.receive(reply2);
                     validitySocket.receive(reply3);
+                    
+                 
                     
                     if (new String(reply1.getData()).trim().equalsIgnoreCase("RECEIVED") && new String(reply2.getData()).trim().equalsIgnoreCase("RECEIVED") && new String(reply3.getData()).trim().equalsIgnoreCase("RECEIVED")) {
                         not_received = false;

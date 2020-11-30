@@ -218,24 +218,24 @@ public class ReplicaManager {
         String result;
         switch (args[0].trim().toUpperCase()) {
             case "ADD":
-                if (willFailure) {
-                    result = "ERROR";
-                } else {
-                    result = usersStore.addItem(args[1].trim(), args[2].trim(), args[3].trim(), Integer.parseInt(args[4].trim()), Double.parseDouble(args[5].trim()));
-                }
+                result = usersStore.addItem(args[1].trim(), args[2].trim(), args[3].trim(), Integer.parseInt(args[4].trim()), Double.parseDouble(args[5].trim()));
                 break;
             case "REMOVE":
-                result = usersStore.removeItem(args[1].trim(), args[2].trim(), Integer.parseInt(args[3].trim()));
+        		result = usersStore.removeItem(args[1].trim(), args[2].trim(), Integer.parseInt(args[3].trim()));
                 break;
             case "LIST":
-                String[] results = usersStore.listItemAvailability(args[1].trim());
-                result = Arrays.toString(results);
+				if (willFailure) {
+                    result = "ERROR";
+           	 	} else {
+           	 		String[] results = usersStore.listItemAvailability(args[1].trim());
+           	 		result = Arrays.toString(results);
+	           	 }
                 break;
             case "PURCHASE":
                 result = usersStore.purchaseItem(args[1].trim(), args[2].trim(), args[3].trim());
                 break;
             case "FIND":
-                results = usersStore.findItem(args[1].trim(), args[2].trim());
+                String[] results = usersStore.findItem(args[1].trim(), args[2].trim());
                 result = Arrays.toString(results);
                 break;
             case "RETURN":
@@ -285,6 +285,7 @@ public class ReplicaManager {
             sendSocket.setSoTimeout(ReplicaManager.resendDelay);
             while (not_received) {
                 sendSocket.send(request);
+                System.out.println("Sent reply");
                 try {
                     byte[] buffer = new byte[1000];
                     DatagramPacket reply = new DatagramPacket(buffer, buffer.length);

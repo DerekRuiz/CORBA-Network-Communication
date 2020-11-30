@@ -236,11 +236,11 @@ public class CustomerClient {
 		
 		while (true)
 		{
-			System.out.println("Enter date (dd-MM-yyyy)");
+			System.out.println("Enter date (ddMMyyyy)");
 			date = scanner.nextLine();
 			
 			try {
-				new SimpleDateFormat("dd-MM-yyyy").parse(date);
+				new SimpleDateFormat("ddMMyyyy").parse(date);
 				break;
 			}
 			catch (ParseException e){
@@ -276,11 +276,11 @@ public class CustomerClient {
 		
 		while (true)
 		{
-			System.out.println("Enter date (dd-MM-yyyy)");
+			System.out.println("Enter date (ddMMyyyy)");
 			date = scanner.nextLine();
 			
 			try {
-				new SimpleDateFormat("dd-MM-yyyy").parse(date);
+				new SimpleDateFormat("ddMMyyyy").parse(date);
 				break;
 			}
 			catch (ParseException e){
@@ -326,11 +326,11 @@ public class CustomerClient {
 		
 		while (true)
 		{
-			System.out.println("Enter date (dd-MM-yyyy)");
+			System.out.println("Enter date (ddMMyyyy)");
 			date = scanner.nextLine();
 			
 			try {
-				new SimpleDateFormat("dd-MM-yyyy").parse(date);
+				new SimpleDateFormat("ddMMyyyy").parse(date);
 				break;
 			}
 			catch (ParseException e){
@@ -377,38 +377,38 @@ public class CustomerClient {
 	}
 	
     public static void main(String args[]) {
-      try {
-         
-    	   	UUID uuid = UUID.randomUUID();
-    	   	Helper.initializeORB(args, uuid.toString());
-		   	client = new CustomerClient(orb, uuid.toString());
-		     while (true)
-		     { 
-		    	 Scanner scanner = new Scanner(System.in);
-		    	 System.out.println("Welcome. Please enter your id");
-		    	
-		    	 String id = scanner.nextLine();
-		    	 
-		    	 if (ValidateId(id)) {
-		    		 userId = id;
-		    		 log = Helper.initiateLogger(userId);
-		    		 log.info(userId+ " has logged in");
-		    		 EnterSystem();
-		    	 }
-		    	 else
-		    		 System.out.println("Oops, bad id");
-		    	 
-		    	 
-		    	 
-		     }
-         
-      } 
-      catch (Exception ex) {
-         ex.printStackTrace( );
-      } 
-   
-   } 
     
-
+    	  try {
+        	  
+        	  UUID uuid = UUID.randomUUID();
+        	  
+        	  Helper.initializeORB(args, uuid.toString());
+        	  
+        	  ORB orb = ORB.init(args, null);
+    		    
+              client = new CustomerClient(orb, uuid.toString());
+              while (true)
+              { 
+             	 Scanner scanner = new Scanner(System.in);
+            	 System.out.println("Welcome. Please enter your id");
+            	
+            	 String id = scanner.nextLine();
+            	 
+            	 if (ValidateId(id)) {
+            		 client.setUserId(id);
+            		 log = Helper.initiateLogger(userId);
+            		 log.info(userId+ " has logged in");
+            		 EnterSystem();
+            	 }
+            	 else
+            		 System.out.println("Oops, bad id");
+              }
+             
+             
+          } 
+          catch (Exception ex) {
+             ex.printStackTrace( );
+          } 
+    }
    
 }

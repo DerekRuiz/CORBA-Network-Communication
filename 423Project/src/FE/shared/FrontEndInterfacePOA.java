@@ -1,4 +1,4 @@
-package FE.shared;
+package shared;
 
 
 /**
@@ -17,15 +17,15 @@ public abstract class FrontEndInterfacePOA extends org.omg.PortableServer.Servan
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("ReturnItem", new Integer (0));
-    _methods.put ("PurchaseItem", new Integer (1));
-    _methods.put ("FindItem", new Integer (2));
-    _methods.put ("AddCustomerToWaitList", new Integer (3));
-    _methods.put ("AddItem", new Integer (4));
-    _methods.put ("RemoveItem", new Integer (5));
-    _methods.put ("ListItemAvailability", new Integer (6));
-    _methods.put ("exchangeItem", new Integer (7));
-    _methods.put ("shutdown", new Integer (8));
+    _methods.put ("ReturnItem", new java.lang.Integer (0));
+    _methods.put ("PurchaseItem", new java.lang.Integer (1));
+    _methods.put ("FindItem", new java.lang.Integer (2));
+    _methods.put ("AddCustomerToWaitList", new java.lang.Integer (3));
+    _methods.put ("AddItem", new java.lang.Integer (4));
+    _methods.put ("RemoveItem", new java.lang.Integer (5));
+    _methods.put ("ListItemAvailability", new java.lang.Integer (6));
+    _methods.put ("exchangeItem", new java.lang.Integer (7));
+    _methods.put ("shutdown", new java.lang.Integer (8));
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,
@@ -33,7 +33,7 @@ public abstract class FrontEndInterfacePOA extends org.omg.PortableServer.Servan
                                 org.omg.CORBA.portable.ResponseHandler $rh)
   {
     org.omg.CORBA.portable.OutputStream out = null;
-    Integer __method = (Integer)_methods.get ($method);
+    java.lang.Integer __method = (java.lang.Integer)_methods.get ($method);
     if (__method == null)
       throw new org.omg.CORBA.BAD_OPERATION (0, org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE);
 

@@ -1,4 +1,4 @@
-package FE.shared.FrontEndInterfacePackage;
+package shared.FrontEndInterfacePackage;
 
 
 /**

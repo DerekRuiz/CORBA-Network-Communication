@@ -1,0 +1,4 @@
+Nov 27, 2020 5:31:09 PM clients.CustomerClient main
+INFO: QCU1000 has logged in
+Nov 27, 2020 5:31:34 PM clients.CustomerClient PurchaseItem
+INFO: PurchaseItem(QCU1000, QC1000, 27-11-2020)

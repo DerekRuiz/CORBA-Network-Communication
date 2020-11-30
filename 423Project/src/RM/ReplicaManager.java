@@ -1,4 +1,4 @@
-
+package replica_manager;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -15,6 +15,8 @@ import java.util.Queue;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import store.StoreServer;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -179,7 +181,7 @@ public class ReplicaManager {
             InetAddress senderAddress = InetAddress.getByName(args[0]);
             int senderPort = Integer.parseInt(args[1]);
             int processID = Integer.parseInt(args[2]);
-
+            
             // Ensures that no duplicate message is processed.
             if (processID < this.nextProcessID) {
                 return;
@@ -214,27 +216,26 @@ public class ReplicaManager {
         }
 
         String result;
-        String[] results;
         switch (args[0].trim().toUpperCase()) {
             case "ADD":
                 result = usersStore.addItem(args[1].trim(), args[2].trim(), args[3].trim(), Integer.parseInt(args[4].trim()), Double.parseDouble(args[5].trim()));
                 break;
             case "REMOVE":
-                result = usersStore.removeItem(args[1].trim(), args[2].trim(), Integer.parseInt(args[3].trim()));
+        		result = usersStore.removeItem(args[1].trim(), args[2].trim(), Integer.parseInt(args[3].trim()));
                 break;
             case "LIST":
-                if (willFailure) {
+				if (willFailure) {
                     result = "ERROR";
-                } else {
-                    results = usersStore.listItemAvailability(args[1].trim());
-                    result = Arrays.toString(results);
-                }
+           	 	} else {
+           	 		String[] results = usersStore.listItemAvailability(args[1].trim());
+           	 		result = Arrays.toString(results);
+	           	 }
                 break;
             case "PURCHASE":
                 result = usersStore.purchaseItem(args[1].trim(), args[2].trim(), args[3].trim());
                 break;
             case "FIND":
-                results = usersStore.findItem(args[1].trim(), args[2].trim());
+                String[] results = usersStore.findItem(args[1].trim(), args[2].trim());
                 result = Arrays.toString(results);
                 break;
             case "RETURN":
@@ -284,6 +285,7 @@ public class ReplicaManager {
             sendSocket.setSoTimeout(ReplicaManager.resendDelay);
             while (not_received) {
                 sendSocket.send(request);
+                System.out.println("Sent reply");
                 try {
                     byte[] buffer = new byte[1000];
                     DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
@@ -296,7 +298,6 @@ public class ReplicaManager {
                 }
             }
         } catch (IOException ex) {
-            Logger.getLogger(test.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -332,10 +333,10 @@ public class ReplicaManager {
     private void restartReplicas() {
         System.out.println("restarting");
         sendPauseProcessing();
-
+        
         this.willCrash = false;
         this.willFailure = false;
-
+        
         qcStore.close();
         onStore.close();
         bcStore.close();
@@ -345,7 +346,7 @@ public class ReplicaManager {
         for (String query : storedCommands) {
             this.callMethod(query);
         }
-
+        
         sendResumeProcessing();
         System.out.println("complete");
     }

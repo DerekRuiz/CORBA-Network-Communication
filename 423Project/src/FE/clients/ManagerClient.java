@@ -1,4 +1,4 @@
-package FE.clients;
+package clients;
 
 
 import common.Helper;

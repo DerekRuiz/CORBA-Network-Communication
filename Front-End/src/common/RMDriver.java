@@ -15,12 +15,13 @@ public class RMDriver {
 		if (args.length == 4) {
 			System.out.println(args[0]);
 			System.out.println(args[1]);
-			System.out.println(args[2]);
-			System.out.println(args[3]);
+			
 			InetAddress RMAddress = InetAddress.getByName(args[0]);
 			int port = Integer.parseInt(args[1]);
 			boolean failMode = Boolean.parseBoolean(args[2]);
 			boolean crashMode = Boolean.parseBoolean(args[3]);
+			System.out.println(failMode);
+			System.out.println(crashMode);
 		      
 			ReplicaManager rm = new ReplicaManager(RMAddress, port, failMode, crashMode);
 			System.out.println("Created RM");

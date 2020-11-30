@@ -52,7 +52,7 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 			this.uuid = uuid;
 			
 			ReadAddresses();
-			
+			System.out.println(this.localAddress + " " + this.localPort);
 			this.socket = new DatagramSocket(this.localPort, this.localAddress);
 			
 			log = initiateLogger(uuid);
@@ -61,9 +61,9 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 			log.info("Front-End started up with port: " + localPort);
 			
 			
-			RMAddresses.add(new Tuple<InetAddress, Integer, String>(RM1Address, RM1Port, "PA"));
-			RMAddresses.add(new Tuple<InetAddress, Integer, String>(RM2Address, RM2Port, "Jonathan"));
-			RMAddresses.add(new Tuple<InetAddress, Integer, String>(RM3Address, RM3Port, "Derek"));
+			RMAddresses.add(new Tuple<InetAddress, Integer, String>(RM1Address, RM1Port, null));
+			RMAddresses.add(new Tuple<InetAddress, Integer, String>(RM2Address, RM2Port, null));
+			RMAddresses.add(new Tuple<InetAddress, Integer, String>(RM3Address, RM3Port, null));
 	}
 	
 	public void shutdown() {
@@ -276,16 +276,19 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
     	ArrayList<Tuple<InetAddress, Integer, String>> repliedRM = new ArrayList<Tuple<InetAddress, Integer, String>>(); 
     	boolean continueRecieving = true;
     	String answer;
+    	int count = 0;
     	long timeoutTime = 0;
     	
     	try {
     		while(continueRecieving) {
     			byte[] buffer = new byte[1000];
                 DatagramPacket request = new DatagramPacket(buffer, buffer.length);
+                System.out.println("Receiving now");
                 socket.receive(request);
+                System.out.println("Message recieved");
                 long timeNow = System.currentTimeMillis();
                 long timeToReply = timeNow  - stopwatch; 
-                		
+                count++;
                 String message = new String(request.getData());
                 
                 String[] splitMessage = message.split(";");
@@ -304,8 +307,8 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
                     sendReceivedMessage(request.getAddress(), request.getPort());
                 }
                 
-                if (timeoutTime == 0 || timeToReply > timeoutTime)
-                	socket.setSoTimeout((int) timeToReply * 2);
+                if (count > 1 && (timeoutTime == 0 || timeToReply > timeoutTime))
+                	socket.setSoTimeout(10000);
                 
                 if (expectedReplies == repliedRM.size())
                 	continueRecieving = false;
@@ -339,15 +342,6 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 			}
 			
 		}
-		
-		if (repliedRM.size() < RMAddresses.size()) {
-			ArrayList<Tuple<InetAddress, Integer, String>> copy = new ArrayList<Tuple<InetAddress, Integer, String>>(RMAddresses);
-			copy.removeAll(repliedRM);
-			Tuple<InetAddress, Integer, String> missingRM = copy.get(0);
-			notifyCrash(missingRM.getLeft(), missingRM.getMiddle());
-			
-		}
-		
 		if(counter == RMAddresses.size()) {
 			return result;
 		}
@@ -358,6 +352,29 @@ public class FrontEnd extends shared.FrontEndInterfacePOA {
 				return result;
 			}
 			
+		}
+		
+		if (repliedRM.size() < RMAddresses.size()) {
+			ArrayList<Boolean> copy = new ArrayList<>(RMAddresses.size());
+			copy.add(false);copy.add(false);copy.add(false);
+			
+			Tuple<InetAddress, Integer, String> missingRM;
+			
+			for (int i = 0; i < RMAddresses.size(); i++) {
+				for(Tuple<InetAddress, Integer, String> ref: repliedRM) {
+					if (ref.getLeft().equals(RMAddresses.get(i).getLeft()) && ref.getMiddle().equals(RMAddresses.get(i).getMiddle())) {
+						copy.set(i, true);
+					}
+				}
+			}
+			
+			for (int i = 0; i < 3; i++) {
+				System.out.println(copy.get(i) + "  " + RMAddresses.get(i).getLeft());
+				if (!copy.get(i)){
+					missingRM = RMAddresses.get(i);
+					notifyCrash(missingRM.getLeft(), missingRM.getMiddle());
+				}
+			}
 		}
 		
 		return result;

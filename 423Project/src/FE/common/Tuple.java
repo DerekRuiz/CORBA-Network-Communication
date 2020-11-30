@@ -1,4 +1,4 @@
-package FE.common;
+package common;
 
 import java.util.Date;
 

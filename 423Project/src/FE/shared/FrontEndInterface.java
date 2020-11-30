@@ -1,4 +1,4 @@
-package FE.shared;
+package shared;
 
 
 /**
